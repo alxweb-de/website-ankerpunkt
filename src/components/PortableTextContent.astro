@@ -1,0 +1,24 @@
+---
+import { PortableText } from 'astro-portabletext';
+import PortableImage from './PortableImage.astro';
+import type { PortableTextValue } from '../lib/sanity/types';
+
+interface Props {
+  value: PortableTextValue | undefined;
+  class?: string;
+}
+
+const { value, class: className = '' } = Astro.props;
+
+const components = {
+  type: { image: PortableImage },
+};
+---
+
+{
+  value && (
+    <div class:list={['prose-ankerpunkt prose max-w-none', className]}>
+      <PortableText value={value} components={components} />
+    </div>
+  )
+}

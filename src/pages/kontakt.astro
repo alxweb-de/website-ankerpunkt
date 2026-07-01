@@ -1,0 +1,93 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Container from '../components/Container.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import { SOCIAL_PLATFORM_LABELS } from '../lib/format';
+import { getSettings } from '../lib/sanity/api';
+
+const settings = await getSettings();
+const churchName = settings?.churchName ?? 'Ankerpunkt';
+---
+
+<BaseLayout title="Kontakt" description={`So erreichst du ${churchName} – Adresse, Telefon, E-Mail und Kontaktzeiten.`}>
+  <Container class="py-16 sm:py-20">
+    <SectionHeading eyebrow="Kontakt" heading="Wir freuen uns von dir zu hören" text="Ob Frage, Anliegen oder einfach nur Hallo sagen – melde dich gerne bei uns." />
+
+    <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        settings?.address && (
+          <div class="rounded-2xl bg-anchor-50/60 p-6">
+            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Adresse</p>
+            <address class="mt-2 not-italic text-ink">
+              {churchName}<br />
+              {settings.address.street}<br />
+              {settings.address.zip} {settings.address.city}
+            </address>
+          </div>
+        )
+      }
+
+      {
+        (settings?.phone || settings?.email) && (
+          <div class="rounded-2xl bg-anchor-50/60 p-6">
+            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Direktkontakt</p>
+            <div class="mt-2 space-y-1 text-ink">
+              {settings?.phone && (
+                <p>
+                  <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class="hover:text-anchor-800">
+                    {settings.phone}
+                  </a>
+                </p>
+              )}
+              {settings?.email && (
+                <p>
+                  <a href={`mailto:${settings.email}`} class="hover:text-anchor-800">
+                    {settings.email}
+                  </a>
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      }
+
+      {
+        settings?.officeHours && settings.officeHours.length > 0 && (
+          <div class="rounded-2xl bg-anchor-50/60 p-6">
+            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Erreichbarkeit</p>
+            <div class="mt-2 space-y-2 text-ink">
+              {settings.officeHours.map((entry) => (
+                <p>
+                  <span class="block text-sm font-medium">{entry.label}</span>
+                  <span class="text-sm text-ink-soft">{entry.hours}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+        )
+      }
+    </div>
+
+    {
+      settings?.socialLinks && settings.socialLinks.length > 0 && (
+        <div class="mt-12">
+          <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Folge uns</p>
+          <ul class="mt-3 flex flex-wrap gap-3">
+            {settings.socialLinks.map((link) => (
+              <li>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center rounded-full bg-anchor-800 px-4 py-2 text-sm font-medium text-paper hover:bg-anchor-700"
+                >
+                  {SOCIAL_PLATFORM_LABELS[link.platform]}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+  </Container>
+</BaseLayout>

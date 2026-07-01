@@ -1,0 +1,13 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+---
+
+<div class:list={['relative overflow-hidden', className]}>
+  <slot />
+  <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/15 via-transparent to-transparent"></div>
+  <div class="pointer-events-none absolute inset-0 ring-1 ring-inset ring-ink/8"></div>
+</div>

@@ -1,0 +1,79 @@
+---
+interface Props {
+  class?: string;
+  label?: string;
+}
+
+const { class: className = '', label } = Astro.props;
+
+const uid = Math.random().toString(36).slice(2, 9);
+---
+
+<div class:list={['relative overflow-hidden bg-anchor-100', className]} role="img" aria-label={label ?? 'Platzhalterbild'}>
+  <svg
+    viewBox="0 0 800 600"
+    preserveAspectRatio="xMidYMid slice"
+    class="h-full w-full"
+    aria-hidden="true"
+  >
+    <defs>
+      <linearGradient id={`sky-${uid}`} x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0%" stop-color="#f4ecdf" />
+        <stop offset="45%" stop-color="#e7d6b8" />
+        <stop offset="75%" stop-color="#b9d7d5" />
+        <stop offset="100%" stop-color="#5e9b97" />
+      </linearGradient>
+      <radialGradient id={`glow-${uid}`} cx="68%" cy="28%" r="38%">
+        <stop offset="0%" stop-color="#fbf8f3" stop-opacity="0.95" />
+        <stop offset="100%" stop-color="#fbf8f3" stop-opacity="0" />
+      </radialGradient>
+      <linearGradient id={`hillBack-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5e9b97" />
+        <stop offset="100%" stop-color="#3f7d79" />
+      </linearGradient>
+      <linearGradient id={`hillMid-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2f6460" />
+        <stop offset="100%" stop-color="#27514e" />
+      </linearGradient>
+      <linearGradient id={`hillFront-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1f413f" />
+        <stop offset="100%" stop-color="#15302e" />
+      </linearGradient>
+      <radialGradient id={`vignette-${uid}`} cx="50%" cy="45%" r="75%">
+        <stop offset="60%" stop-color="#15302e" stop-opacity="0" />
+        <stop offset="100%" stop-color="#15302e" stop-opacity="0.22" />
+      </radialGradient>
+      <filter id={`grain-${uid}`}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="noise" />
+        <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0" />
+      </filter>
+    </defs>
+
+    <rect width="800" height="600" fill={`url(#sky-${uid})`} />
+    <rect width="800" height="600" fill={`url(#glow-${uid})`} />
+
+    <path d="M0 360 Q 160 300 340 350 T 800 320 V600 H0 Z" fill={`url(#hillBack-${uid})`} opacity="0.55" />
+    <path d="M0 430 Q 220 370 420 420 T 800 390 V600 H0 Z" fill={`url(#hillMid-${uid})`} opacity="0.8" />
+    <path d="M0 500 Q 200 450 400 495 T 800 470 V600 H0 Z" fill={`url(#hillFront-${uid})`} />
+
+    <circle cx="248" cy="487" r="2.4" fill="#f4ecdf" opacity="0.85" />
+    <circle cx="276" cy="492" r="1.8" fill="#f4ecdf" opacity="0.7" />
+    <circle cx="305" cy="486" r="2" fill="#f4ecdf" opacity="0.8" />
+    <circle cx="520" cy="478" r="2.2" fill="#f4ecdf" opacity="0.75" />
+    <circle cx="552" cy="483" r="1.6" fill="#f4ecdf" opacity="0.65" />
+
+    <g transform="translate(706 522)" opacity="0.16">
+      <path
+        d="M16 0v40M16 44c-9 0-16-5.6-16-13.4h4.5A11.6 11.6 0 0 0 16 40a11.6 11.6 0 0 0 11.5-9.4H32C32 38.4 25 44 16 44ZM9.6 8.4h12.8M16 0a4.4 4.4 0 1 1 0 8.8A4.4 4.4 0 0 1 16 0Z"
+        fill="none"
+        stroke="#fbf8f3"
+        stroke-width="2.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </g>
+
+    <rect width="800" height="600" fill={`url(#vignette-${uid})`} />
+    <rect width="800" height="600" filter={`url(#grain-${uid})`} />
+  </svg>
+</div>

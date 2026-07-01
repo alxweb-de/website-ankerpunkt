@@ -1,0 +1,140 @@
+---
+import Container from './Container.astro';
+import CtaButton from './CtaButton.astro';
+import { urlFor } from '../lib/sanity/image';
+import type { Settings } from '../lib/sanity/types';
+
+interface Props {
+  settings: Settings | null;
+}
+
+const { settings } = Astro.props;
+
+const navItems = [
+  { label: 'Startseite', href: '/' },
+  { label: 'Neuigkeiten', href: '/neuigkeiten' },
+  { label: 'Veranstaltungen', href: '/veranstaltungen' },
+  { label: 'Gruppen', href: '/gruppen' },
+  { label: 'Über uns', href: '/ueber-uns' },
+];
+
+const currentPath = Astro.url.pathname;
+
+function isActive(href: string) {
+  if (href === '/') return currentPath === '/';
+  return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+
+const churchName = settings?.churchName ?? 'Ankerpunkt';
+const logoUrl = settings?.logo?.asset ? urlFor(settings.logo).width(96).height(96).fit('crop').url() : null;
+---
+
+<header class="sticky top-0 z-40 border-b border-ink/8 bg-paper/95 backdrop-blur-md">
+  <Container class="flex h-18 items-center justify-between sm:h-20">
+    <a href="/" class="flex items-center gap-3">
+      {
+        logoUrl ? (
+          <img src={logoUrl} alt={churchName} width="42" height="42" class="h-10 w-10 rounded-full object-cover ring-1 ring-ink/10" />
+        ) : (
+          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-anchor-800 text-paper ring-1 ring-ink/10">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" aria-hidden="true">
+              <path
+                d="M12 3v18M12 21c-4 0-7-2.5-7-6h2a5 5 0 0 0 10 0h2c0 3.5-3 6-7 6ZM9 6h6M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+        )
+      }
+      <span class="flex flex-col leading-none">
+        <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
+        <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">MG Rengsdorf</span>
+      </span>
+    </a>
+
+    <nav aria-label="Hauptnavigation" class="hidden lg:block">
+      <ul class="flex items-center gap-7">
+        {
+          navItems.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+                class:list={[
+                  'relative py-2 text-[0.925rem] font-medium transition-colors duration-200 after:absolute after:right-0 after:-bottom-0.5 after:left-0 after:h-px after:scale-x-0 after:bg-anchor-700 after:transition-transform after:duration-200 hover:text-anchor-900 hover:after:scale-x-100',
+                  isActive(item.href) ? 'text-anchor-900 after:scale-x-100' : 'text-ink-soft',
+                ]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="hidden lg:block">
+      <CtaButton href="/kontakt" size="sm">Kontakt</CtaButton>
+    </div>
+
+    <button
+      id="menu-toggle"
+      type="button"
+      class="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-anchor-50 lg:hidden"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+    >
+      <span class="sr-only">Menü öffnen</span>
+      <svg id="menu-icon-open" viewBox="0 0 24 24" fill="none" class="h-6 w-6" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </svg>
+      <svg id="menu-icon-close" viewBox="0 0 24 24" fill="none" class="hidden h-6 w-6" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </svg>
+    </button>
+  </Container>
+
+  <nav id="mobile-menu" aria-label="Mobile Navigation" class="hidden border-t border-ink/8 bg-paper lg:hidden">
+    <Container>
+      <ul class="flex flex-col py-2">
+        {
+          navItems.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+                class:list={[
+                  'block rounded-lg px-4 py-3 text-base font-medium',
+                  isActive(item.href) ? 'text-anchor-900' : 'text-ink-soft',
+                ]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li class="px-4 pt-2 pb-3">
+          <CtaButton href="/kontakt" class="w-full">Kontakt</CtaButton>
+        </li>
+      </ul>
+    </Container>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('menu-icon-open');
+  const iconClose = document.getElementById('menu-icon-close');
+
+  toggle?.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!expanded));
+    menu?.classList.toggle('hidden');
+    iconOpen?.classList.toggle('hidden');
+    iconClose?.classList.toggle('hidden');
+  });
+</script>

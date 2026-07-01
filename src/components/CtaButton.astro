@@ -1,0 +1,40 @@
+---
+interface Props {
+  href: string;
+  variant?: 'primary' | 'secondary' | 'ghost' | 'inverse';
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+const { href, variant = 'primary', size = 'md', class: className = '' } = Astro.props;
+
+const isExternal = /^https?:\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:');
+
+const variants = {
+  primary:
+    'bg-anchor-800 text-paper hover:bg-anchor-700 focus-visible:outline-anchor-800',
+  secondary:
+    'bg-paper text-anchor-900 ring-1 ring-inset ring-anchor-200 hover:bg-anchor-50 focus-visible:outline-anchor-800',
+  ghost: 'text-anchor-800 hover:text-anchor-600 focus-visible:outline-anchor-800',
+  inverse: 'bg-paper text-anchor-900 hover:bg-anchor-50 focus-visible:outline-paper',
+};
+
+const sizes = {
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-6 py-3 text-sm',
+};
+---
+
+<a
+  href={href}
+  class:list={[
+    'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+    variants[variant],
+    sizes[size],
+    className,
+  ]}
+  target={isExternal ? '_blank' : undefined}
+  rel={isExternal ? 'noopener noreferrer' : undefined}
+>
+  <slot />
+</a>

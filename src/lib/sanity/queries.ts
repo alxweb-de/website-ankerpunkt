@@ -1,0 +1,209 @@
+import { defineQuery } from 'groq';
+
+const imageFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    metadata { lqip, dimensions { width, height } }
+  },
+  alt,
+  hotspot,
+  crop
+}`;
+
+const personFragment = /* groq */ `{
+  _id,
+  name,
+  role,
+  "photo": photo${imageFragment},
+  email,
+  phone,
+  responsibleAreas,
+  isActive,
+  order
+}`;
+
+const ctaFragment = /* groq */ `{ label, url }`;
+
+const seoFragment = /* groq */ `{ title, description }`;
+
+const newsCategoryFragment = /* groq */ `{ _id, title, slug }`;
+
+const eventSummaryFragment = /* groq */ `{
+  _id,
+  title,
+  slug,
+  "coverImage": coverImage${imageFragment},
+  excerpt,
+  startDateTime,
+  endDateTime,
+  location,
+  targetAudience,
+  status,
+  isFeatured
+}`;
+
+const newsSummaryFragment = /* groq */ `{
+  _id,
+  title,
+  slug,
+  "coverImage": coverImage${imageFragment},
+  excerpt,
+  publishedAt,
+  "category": category->${newsCategoryFragment},
+  isFeatured
+}`;
+
+const groupSummaryFragment = /* groq */ `{
+  _id,
+  name,
+  slug,
+  "image": image${imageFragment},
+  ageGroup,
+  description,
+  schedule,
+  isActive
+}`;
+
+export const SETTINGS_QUERY = defineQuery(/* groq */ `
+  *[_type == "settings"][0]{
+    churchName,
+    "logo": logo${imageFragment},
+    address,
+    phone,
+    email,
+    officeHours,
+    socialLinks,
+    livestreamUrl,
+    footerText,
+    imprintUrl,
+    privacyUrl
+  }
+`);
+
+export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
+  *[_type == "homePage"][0]{
+    heroHeading,
+    heroText,
+    "heroImage": heroImage${imageFragment},
+    "primaryButton": primaryButton${ctaFragment},
+    "secondaryButton": secondaryButton${ctaFragment},
+    "featuredNews": featuredNews[]->${newsSummaryFragment},
+    "featuredEvents": featuredEvents[]->${eventSummaryFragment},
+    ankerpunktSection{
+      heading,
+      text,
+      "image": image${imageFragment},
+      "link": link${ctaFragment}
+    },
+    livestreamSection{
+      isVisible,
+      heading,
+      text,
+      overrideUrl
+    }
+  }
+`);
+
+export const UPCOMING_EVENTS_QUERY = defineQuery(/* groq */ `
+  *[_type == "event" && startDateTime >= now()] | order(startDateTime asc)${eventSummaryFragment}
+`);
+
+export const UPCOMING_EVENTS_LIMIT_QUERY = defineQuery(/* groq */ `
+  *[_type == "event" && startDateTime >= now()] | order(startDateTime asc)[0...$limit]${eventSummaryFragment}
+`);
+
+export const EVENT_BY_SLUG_QUERY = defineQuery(/* groq */ `
+  *[_type == "event" && slug.current == $slug][0]{
+    _id,
+    title,
+    slug,
+    "coverImage": coverImage${imageFragment},
+    excerpt,
+    body[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    startDateTime,
+    endDateTime,
+    location,
+    targetAudience,
+    registrationLink,
+    "contactPerson": contactPerson->${personFragment},
+    status,
+    isFeatured,
+    "seo": seo${seoFragment}
+  }
+`);
+
+export const EVENT_SLUGS_QUERY = defineQuery(/* groq */ `
+  *[_type == "event" && defined(slug.current)]{ "slug": slug.current }
+`);
+
+export const NEWS_LIST_QUERY = defineQuery(/* groq */ `
+  *[_type == "newsPost" && publishedAt <= now() && (!defined(expiresAt) || expiresAt > now())] | order(publishedAt desc)${newsSummaryFragment}
+`);
+
+export const NEWS_BY_SLUG_QUERY = defineQuery(/* groq */ `
+  *[_type == "newsPost" && slug.current == $slug][0]{
+    _id,
+    title,
+    slug,
+    "coverImage": coverImage${imageFragment},
+    excerpt,
+    body[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    publishedAt,
+    "category": category->${newsCategoryFragment},
+    isFeatured,
+    "seo": seo${seoFragment}
+  }
+`);
+
+export const NEWS_SLUGS_QUERY = defineQuery(/* groq */ `
+  *[_type == "newsPost" && defined(slug.current)]{ "slug": slug.current }
+`);
+
+export const GROUPS_QUERY = defineQuery(/* groq */ `
+  *[_type == "group" && isActive == true] | order(name asc)${groupSummaryFragment}
+`);
+
+export const GROUP_BY_SLUG_QUERY = defineQuery(/* groq */ `
+  *[_type == "group" && slug.current == $slug][0]{
+    _id,
+    name,
+    slug,
+    "image": image${imageFragment},
+    ageGroup,
+    description,
+    schedule,
+    "contactPerson": contactPerson->${personFragment},
+    contactOptions,
+    isActive
+  }
+`);
+
+export const GROUP_SLUGS_QUERY = defineQuery(/* groq */ `
+  *[_type == "group" && defined(slug.current)]{ "slug": slug.current }
+`);
+
+export const RECURRING_EVENTS_QUERY = defineQuery(/* groq */ `
+  *[_type == "recurringEvent" && isActive == true] | order(order asc){
+    _id,
+    title,
+    weekday,
+    time,
+    location,
+    targetAudience,
+    excerpt,
+    "contactPerson": contactPerson->${personFragment},
+    isActive,
+    order
+  }
+`);
+
+export const ACTIVE_PEOPLE_QUERY = defineQuery(/* groq */ `
+  *[_type == "person" && isActive == true] | order(order asc)${personFragment}
+`);

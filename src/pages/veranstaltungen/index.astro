@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Container from '../../components/Container.astro';
+import SectionHeading from '../../components/SectionHeading.astro';
+import EventCard from '../../components/EventCard.astro';
+import { WEEKDAY_LABELS } from '../../lib/format';
+import { getRecurringEvents, getUpcomingEvents } from '../../lib/sanity/api';
+
+const events = await getUpcomingEvents();
+const recurringEvents = await getRecurringEvents();
+---
+
+<BaseLayout title="Veranstaltungen" description="Alle kommenden Veranstaltungen und regelmäßigen Treffen bei Ankerpunkt.">
+  <Container class="py-16 sm:py-20">
+    <SectionHeading eyebrow="Termine" heading="Veranstaltungen" text="Diese Termine erwarten dich als Nächstes bei Ankerpunkt." />
+
+    {
+      events.length > 0 ? (
+        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <EventCard event={event} />
+          ))}
+        </div>
+      ) : (
+        <p class="mt-12 text-ink-soft">Aktuell sind keine Veranstaltungen geplant. Schau bald wieder vorbei.</p>
+      )
+    }
+  </Container>
+
+  {
+    recurringEvents.length > 0 && (
+      <div class="bg-paper-muted py-16 sm:py-20">
+        <Container>
+          <SectionHeading eyebrow="Jede Woche" heading="Regelmäßige Veranstaltungen" />
+          <div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recurringEvents.map((item) => (
+              <div class="rounded-2xl bg-white p-6 ring-1 ring-anchor-100">
+                <p class="text-sm font-semibold text-anchor-700">
+                  {WEEKDAY_LABELS[item.weekday]} · {item.time}
+                </p>
+                <h3 class="mt-3 font-display text-lg font-medium text-ink">{item.title}</h3>
+                {item.targetAudience && <p class="mt-1 text-sm text-anchor-700">{item.targetAudience}</p>}
+                {item.excerpt && <p class="mt-2 text-sm leading-relaxed text-ink-soft">{item.excerpt}</p>}
+                <p class="mt-3 text-xs text-ink-soft/70">{item.location}</p>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </div>
+    )
+  }
+</BaseLayout>

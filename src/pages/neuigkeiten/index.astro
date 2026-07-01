@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Container from '../../components/Container.astro';
+import SectionHeading from '../../components/SectionHeading.astro';
+import NewsCard from '../../components/NewsCard.astro';
+import { getNewsList } from '../../lib/sanity/api';
+
+const news = await getNewsList();
+---
+
+<BaseLayout title="Neuigkeiten" description="Aktuelle Neuigkeiten und Berichte aus der Gemeinde Ankerpunkt.">
+  <Container class="py-16 sm:py-20">
+    <SectionHeading eyebrow="Aktuelles" heading="Neuigkeiten" text="Alles, was bei Ankerpunkt gerade passiert." />
+
+    {
+      news.length > 0 ? (
+        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {news.map((item) => (
+            <NewsCard news={item} />
+          ))}
+        </div>
+      ) : (
+        <p class="mt-12 text-ink-soft">Aktuell gibt es keine Neuigkeiten.</p>
+      )
+    }
+  </Container>
+</BaseLayout>

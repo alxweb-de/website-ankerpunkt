@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Container from '../components/Container.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import { getSettings } from '../lib/sanity/api';
+
+const settings = await getSettings();
+const churchName = settings?.churchName ?? 'Ankerpunkt';
+---
+
+<BaseLayout title="Datenschutz" description={`Datenschutzerklärung von ${churchName}.`}>
+  <Container class="max-w-3xl py-16 sm:py-20">
+    <SectionHeading eyebrow="Rechtliches" heading="Datenschutzerklärung" />
+
+    <div class="prose-ankerpunkt prose mt-10 max-w-none">
+      <h2>1. Verantwortlicher</h2>
+      <p>
+        Verantwortlich für die Datenverarbeitung auf dieser Website ist:<br />
+        {churchName}<br />
+        {settings?.address && (
+          <>
+            {settings.address.street}<br />
+            {settings.address.zip} {settings.address.city}<br />
+          </>
+        )}
+        {settings?.email && <>E-Mail: {settings.email}<br /></>}
+        {settings?.phone && <>Telefon: {settings.phone}</>}
+      </p>
+
+      <h2>2. Erhebung und Speicherung personenbezogener Daten</h2>
+      <p>
+        Beim Besuch dieser Website erfasst unser Hosting-Anbieter automatisch Informationen in sogenannten
+        Server-Log-Dateien, die dein Browser übermittelt (z. B. IP-Adresse, Datum und Uhrzeit der Anfrage,
+        verwendeter Browser). Diese Daten sind nicht bestimmten Personen zuordenbar und werden nicht mit anderen
+        Datenquellen zusammengeführt.
+      </p>
+
+      <h2>3. Kontaktaufnahme</h2>
+      <p>
+        Wenn du per E-Mail oder Telefon Kontakt zu uns aufnimmst, werden deine Angaben zur Bearbeitung der Anfrage
+        sowie für mögliche Anschlussfragen bei uns gespeichert. Diese Daten geben wir nicht ohne deine Einwilligung
+        weiter.
+      </p>
+
+      <h2>4. Deine Rechte</h2>
+      <p>
+        Du hast jederzeit das Recht auf Auskunft über deine bei uns gespeicherten personenbezogenen Daten, deren
+        Herkunft und Empfänger sowie den Zweck der Datenverarbeitung. Außerdem hast du ein Recht auf Berichtigung,
+        Sperrung oder Löschung dieser Daten. Wende dich dazu gerne {settings?.email ? <>an <a href={`mailto:${settings.email}`}>{settings.email}</a></> : 'an uns'}.
+      </p>
+
+      <h2>5. Cookies und externe Inhalte</h2>
+      <p>
+        Diese Website verwendet keine Tracking- oder Marketing-Cookies. Sollten einzelne Seiten externe Inhalte
+        einbinden (z. B. einen Livestream-Anbieter), gelten zusätzlich dessen Datenschutzbestimmungen.
+      </p>
+    </div>
+  </Container>
+</BaseLayout>

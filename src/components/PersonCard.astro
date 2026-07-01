@@ -1,0 +1,46 @@
+---
+import { urlFor } from '../lib/sanity/image';
+import type { PersonSummary } from '../lib/sanity/types';
+
+interface Props {
+  person: PersonSummary;
+  class?: string;
+}
+
+const { person, class: className = '' } = Astro.props;
+const photoUrl = person.photo?.asset ? urlFor(person.photo).width(160).height(160).fit('crop').url() : null;
+const initials = person.name
+  .split(' ')
+  .map((part) => part[0])
+  .slice(0, 2)
+  .join('');
+---
+
+<div class:list={['flex items-start gap-4 rounded-2xl bg-anchor-50/60 p-5', className]}>
+  {
+    photoUrl ? (
+      <img src={photoUrl} alt={person.name} width="56" height="56" class="h-14 w-14 shrink-0 rounded-full object-cover" />
+    ) : (
+      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-anchor-700 text-sm font-medium text-paper">
+        {initials}
+      </span>
+    )
+  }
+  <div class="min-w-0">
+    <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Ansprechpartner</p>
+    <p class="mt-1 font-medium text-ink">{person.name}</p>
+    {person.role && <p class="text-sm text-ink-soft">{person.role}</p>}
+    <div class="mt-2 space-y-0.5 text-sm">
+      {person.email && (
+        <a href={`mailto:${person.email}`} class="block truncate text-anchor-700 hover:text-anchor-900">
+          {person.email}
+        </a>
+      )}
+      {person.phone && (
+        <a href={`tel:${person.phone.replace(/\s+/g, '')}`} class="block text-anchor-700 hover:text-anchor-900">
+          {person.phone}
+        </a>
+      )}
+    </div>
+  </div>
+</div>

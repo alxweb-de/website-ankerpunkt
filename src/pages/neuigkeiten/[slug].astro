@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Container from '../../components/Container.astro';
+import PlaceholderImage from '../../components/PlaceholderImage.astro';
+import PortableTextContent from '../../components/PortableTextContent.astro';
+import { urlFor } from '../../lib/sanity/image';
+import { formatDate } from '../../lib/format';
+import { getNewsBySlug, getNewsSlugs } from '../../lib/sanity/api';
+
+export async function getStaticPaths() {
+  const slugs = await getNewsSlugs();
+  return slugs.map(({ slug }) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const news = await getNewsBySlug(slug);
+
+if (!news) {
+  return Astro.redirect('/neuigkeiten');
+}
+
+const imageUrl = news.coverImage?.asset ? urlFor(news.coverImage).width(1600).height(900).fit('crop').url() : null;
+---
+
+<BaseLayout title={news.seo?.title || news.title} description={news.seo?.description || news.excerpt} ogImage={imageUrl ?? undefined}>
+  <article class="py-16 sm:py-20">
+    <Container class="max-w-3xl">
+      <a href="/neuigkeiten" class="inline-flex items-center gap-1.5 text-sm font-medium text-anchor-700 hover:text-anchor-900">
+        <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+          <path d="M13 8H3M7 4 3 8l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Alle Neuigkeiten
+      </a>
+
+      <div class="mt-6 flex items-center gap-3 text-sm font-medium text-anchor-600">
+        {news.category && <span class="rounded-full bg-anchor-50 px-2.5 py-1">{news.category.title}</span>}
+        <time datetime={news.publishedAt}>{formatDate(news.publishedAt)}</time>
+      </div>
+
+      <h1 class="mt-4 font-display text-3xl font-medium text-ink sm:text-4xl">{news.title}</h1>
+      <p class="mt-4 text-lg leading-relaxed text-ink-soft">{news.excerpt}</p>
+
+      <div class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
+        {
+          imageUrl ? (
+            <img src={imageUrl} alt={news.coverImage?.alt ?? ''} class="h-full w-full object-cover" />
+          ) : (
+            <PlaceholderImage class="h-full w-full" label={news.title} />
+          )
+        }
+      </div>
+
+      <PortableTextContent value={news.body} class="mt-10" />
+    </Container>
+  </article>
+</BaseLayout>

@@ -1,0 +1,97 @@
+---
+import Container from './Container.astro';
+import { SOCIAL_PLATFORM_LABELS } from '../lib/format';
+import type { Settings } from '../lib/sanity/types';
+
+interface Props {
+  settings: Settings | null;
+}
+
+const { settings } = Astro.props;
+
+const churchName = settings?.churchName ?? 'Ankerpunkt';
+const year = new Date().getFullYear();
+
+const legalLinks = [
+  { label: 'Impressum', href: settings?.imprintUrl ?? '/impressum' },
+  { label: 'Datenschutz', href: settings?.privacyUrl ?? '/datenschutz' },
+];
+
+const exploreLinks = [
+  { label: 'Neuigkeiten', href: '/neuigkeiten' },
+  { label: 'Veranstaltungen', href: '/veranstaltungen' },
+  { label: 'Gruppen', href: '/gruppen' },
+  { label: 'Über uns', href: '/ueber-uns' },
+];
+---
+
+<footer class="border-t border-anchor-100 bg-anchor-900 text-anchor-100">
+  <Container class="grid grid-cols-1 gap-12 py-16 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <p class="font-display text-xl font-medium text-paper">{churchName}</p>
+      {settings?.address && (
+        <address class="mt-4 not-italic text-sm leading-relaxed text-anchor-200">
+          {settings.address.street}<br />
+          {settings.address.zip} {settings.address.city}
+        </address>
+      )}
+      {(settings?.phone || settings?.email) && (
+        <ul class="mt-4 space-y-1 text-sm text-anchor-200">
+          {settings?.phone && (
+            <li><a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class="hover:text-paper">{settings.phone}</a></li>
+          )}
+          {settings?.email && (
+            <li><a href={`mailto:${settings.email}`} class="hover:text-paper">{settings.email}</a></li>
+          )}
+        </ul>
+      )}
+    </div>
+
+    <div>
+      <p class="text-sm font-semibold tracking-wide text-paper uppercase">Entdecken</p>
+      <ul class="mt-4 space-y-2 text-sm text-anchor-200">
+        {exploreLinks.map((link) => (
+          <li><a href={link.href} class="hover:text-paper">{link.label}</a></li>
+        ))}
+      </ul>
+    </div>
+
+    {settings?.officeHours && settings.officeHours.length > 0 && (
+      <div>
+        <p class="text-sm font-semibold tracking-wide text-paper uppercase">Erreichbarkeit</p>
+        <ul class="mt-4 space-y-3 text-sm text-anchor-200">
+          {settings.officeHours.map((entry) => (
+            <li>
+              <span class="block font-medium text-anchor-100">{entry.label}</span>
+              <span>{entry.hours}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <div>
+      <p class="text-sm font-semibold tracking-wide text-paper uppercase">Social Media</p>
+      <ul class="mt-4 space-y-2 text-sm text-anchor-200">
+        {settings?.socialLinks?.map((link) => (
+          <li>
+            <a href={link.url} target="_blank" rel="noopener noreferrer" class="hover:text-paper">
+              {SOCIAL_PLATFORM_LABELS[link.platform]}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Container>
+
+  <div class="border-t border-anchor-800">
+    <Container class="flex flex-col items-center justify-between gap-4 py-6 text-xs text-anchor-300 sm:flex-row">
+      <p>{settings?.footerText ?? `© ${year} ${churchName}`}</p>
+      <ul class="flex gap-6">
+        {legalLinks.map((link) => (
+          <li><a href={link.href} class="hover:text-paper">{link.label}</a></li>
+        ))}
+      </ul>
+    </Container>
+  </div>
+</footer>

@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Container from '../components/Container.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import PlaceholderImage from '../components/PlaceholderImage.astro';
+import CtaButton from '../components/CtaButton.astro';
+import { urlFor } from '../lib/sanity/image';
+import { getActivePeople, getHomePage, getSettings } from '../lib/sanity/api';
+
+const homePage = await getHomePage();
+const settings = await getSettings();
+const people = await getActivePeople();
+
+const ankerpunktSection = homePage?.ankerpunktSection;
+const imageUrl = ankerpunktSection?.image?.asset
+  ? urlFor(ankerpunktSection.image).width(1000).height(1200).fit('crop').url()
+  : null;
+---
+
+<BaseLayout
+  title="Über uns"
+  description={`Lerne ${settings?.churchName ?? 'Ankerpunkt'} kennen – wer wir sind und wer für dich da ist.`}
+>
+  <section class="py-16 sm:py-20">
+    <Container class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      <div class="aspect-[4/5] overflow-hidden rounded-3xl">
+        {
+          imageUrl ? (
+            <img src={imageUrl} alt={ankerpunktSection?.image?.alt ?? ''} class="h-full w-full object-cover" />
+          ) : (
+            <PlaceholderImage class="h-full w-full" label="Über uns" />
+          )
+        }
+      </div>
+      <div>
+        <SectionHeading
+          eyebrow="Über uns"
+          heading={ankerpunktSection?.heading || `Was ist ${settings?.churchName ?? 'Ankerpunkt'}?`}
+          text={ankerpunktSection?.text || 'Wir sind eine lebendige Gemeinde, die Menschen jeden Alters auf ihrem Glaubensweg begleitet.'}
+        />
+        <div class="mt-8">
+          <CtaButton href="/kontakt">Kontakt aufnehmen</CtaButton>
+        </div>
+      </div>
+    </Container>
+  </section>
+
+  {
+    people.length > 0 && (
+      <section class="bg-paper-muted py-16 sm:py-20">
+        <Container>
+          <SectionHeading eyebrow="Team" heading="Unsere Ansprechpartner" align="center" class="mx-auto" />
+          <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {people.map((person) => {
+              const photoUrl = person.photo?.asset ? urlFor(person.photo).width(320).height(320).fit('crop').url() : null;
+              return (
+                <div class="flex flex-col items-center rounded-2xl bg-white p-8 text-center ring-1 ring-anchor-100">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt={person.name} width="96" height="96" class="h-24 w-24 rounded-full object-cover" />
+                  ) : (
+                    <span class="flex h-24 w-24 items-center justify-center rounded-full bg-anchor-700 text-xl font-medium text-paper">
+                      {person.name
+                        .split(' ')
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join('')}
+                    </span>
+                  )}
+                  <p class="mt-4 font-display text-lg font-medium text-ink">{person.name}</p>
+                  {person.role && <p class="text-sm text-anchor-700">{person.role}</p>}
+                  {person.responsibleAreas && person.responsibleAreas.length > 0 && (
+                    <p class="mt-2 text-xs text-ink-soft/80">{person.responsibleAreas.join(' · ')}</p>
+                  )}
+                  <div class="mt-4 space-y-0.5 text-sm">
+                    {person.email && (
+                      <a href={`mailto:${person.email}`} class="block text-anchor-700 hover:text-anchor-900">
+                        {person.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Container>
+      </section>
+    )
+  }
+</BaseLayout>

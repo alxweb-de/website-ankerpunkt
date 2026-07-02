@@ -83,6 +83,7 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
 
 export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
   *[_type == "homePage"][0]{
+    heroEyebrow,
     heroHeading,
     heroText,
     "heroImage": heroImage${imageFragment},

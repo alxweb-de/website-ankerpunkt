@@ -182,6 +182,7 @@ export interface LivestreamSection {
 }
 
 export interface HomePage {
+  heroEyebrow?: string;
   heroHeading: string;
   heroText?: string;
   heroImage?: SanityImageData;

@@ -26,7 +26,7 @@ const featuredNews = homePage?.featuredNews?.length
   : (await getNewsList()).slice(0, 3);
 
 const heroImageUrl = homePage?.heroImage?.asset
-  ? urlFor(homePage.heroImage).width(1200).height(1400).fit('crop').url()
+  ? urlFor(homePage.heroImage).width(1400).fit('max').auto('format').url()
   : null;
 
 const ankerpunktImageUrl = homePage?.ankerpunktSection?.image?.asset
@@ -54,10 +54,14 @@ const heroFacts = [
 
     <Container class="relative grid grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24">
       <div class="motion-safe:animate-fade-up">
-        <p class="flex items-center gap-2 text-sm font-semibold tracking-wide text-anchor-600 uppercase">
-          <span class="h-px w-6 bg-anchor-400"></span>
-          Ankerpunkt &middot; MG Rengsdorf
-        </p>
+        {
+          homePage?.heroEyebrow && (
+            <p class="flex items-center gap-2 text-sm font-semibold tracking-wide text-anchor-600 uppercase">
+              <span class="h-px w-6 bg-anchor-400"></span>
+              {homePage.heroEyebrow}
+            </p>
+          )
+        }
         <h1 class="mt-5 text-balance font-display text-4xl leading-[1.1] font-medium text-ink sm:text-5xl lg:text-[3.35rem]">
           {homePage?.heroHeading ?? 'Willkommen bei Ankerpunkt'}
         </h1>
@@ -109,33 +113,30 @@ const heroFacts = [
       </div>
 
       <div class="motion-safe:animate-fade-up motion-safe:[animation-delay:150ms]">
-        <div class="relative">
-          <div
-            class="absolute -inset-4 -z-10 rounded-[2.5rem] border border-anchor-200/70 bg-sand-100/60"
-            aria-hidden="true"
-          >
-          </div>
-          <MediaFrame class="aspect-[4/5] w-full rounded-3xl shadow-xl shadow-anchor-900/15">
-            {
-              heroImageUrl ? (
-                <img
-                  src={heroImageUrl}
-                  alt={homePage?.heroImage?.alt ?? ''}
-                  class="h-full w-full object-cover"
-                  fetchpriority="high"
-                />
-              ) : (
-                <PlaceholderImage class="h-full w-full" label="Ankerpunkt Gemeindehaus in Rengsdorf" />
-              )
-            }
-            <div class="absolute bottom-5 left-5 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-anchor-900 shadow-sm backdrop-blur-sm">
-              <svg viewBox="0 0 16 16" fill="none" class="h-3.5 w-3.5 shrink-0" aria-hidden="true">
-                <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
-                <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
-              </svg>
-              Rengsdorf &middot; Westerwald
-            </div>
-          </MediaFrame>
+        <div class="relative mx-auto w-full max-w-xl lg:max-w-none">
+          {
+            heroImageUrl ? (
+              <img
+                src={heroImageUrl}
+                alt={homePage?.heroImage?.alt ?? ''}
+                class="h-auto w-full object-contain"
+                fetchpriority="high"
+              />
+            ) : (
+              <PlaceholderImage class="aspect-[4/5] w-full rounded-3xl" label="Ankerpunkt Gemeindehaus in Rengsdorf" />
+            )
+          }
+          {
+            heroImageUrl && (
+              <div class="absolute bottom-4 left-4 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-anchor-900 shadow-sm backdrop-blur-sm">
+                <svg viewBox="0 0 16 16" fill="none" class="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+                  <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
+                  <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
+                </svg>
+                Rengsdorf &middot; Westerwald
+              </div>
+            )
+          }
         </div>
       </div>
     </Container>

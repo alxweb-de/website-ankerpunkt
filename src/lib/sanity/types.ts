@@ -101,11 +101,16 @@ export interface NewsCategory {
 
 export type EventStatus = 'planned' | 'soldOut' | 'cancelled';
 
+export interface EventImage extends SanityImageData {
+  displayMode?: ImageDisplayMode;
+  cropPosition?: ImageCropPosition;
+}
+
 export interface EventSummary {
   _id: string;
   title: string;
   slug: SanitySlug;
-  coverImage?: SanityImageData;
+  coverImage?: EventImage;
   excerpt: string;
   startDateTime: string;
   endDateTime?: string;
@@ -154,17 +159,52 @@ export interface GroupDetail extends GroupSummary {
   contactOptions?: ContactOption[];
 }
 
-export interface RecurringEvent {
+export type ImageDisplayMode = 'contain' | 'cover';
+export type ImageCropPosition = 'top' | 'center' | 'bottom';
+
+export interface RecurringEventImage extends SanityImageData {
+  displayMode?: ImageDisplayMode;
+  cropPosition?: ImageCropPosition;
+}
+
+export interface ScheduleEntry {
+  _key: string;
+  weekday: Weekday;
+  timeFrom: string;
+  timeTo?: string;
+  extra?: string;
+  note?: string;
+}
+
+export interface RecurringEventSummary {
   _id: string;
   title: string;
-  weekday: Weekday;
-  time: string;
+  slug?: SanitySlug;
+  mainImage?: RecurringEventImage;
+  schedule?: ScheduleEntry[];
+  /** @deprecated Ersetzt durch `schedule`. Nur noch als Fallback für alte Datensätze ohne Termine-Liste. */
+  weekday?: Weekday;
+  /** @deprecated Ersetzt durch `schedule`. Nur noch als Fallback für alte Datensätze ohne Termine-Liste. */
+  time?: string;
   location: string;
   targetAudience?: string;
   excerpt?: string;
-  contactPerson?: PersonSummary;
+  note?: string;
   isActive?: boolean;
   order?: number;
+}
+
+export interface RecurringEventDetail extends RecurringEventSummary {
+  body?: PortableTextValue;
+  contactPersons?: PersonSummary[];
+}
+
+export type HeroInfoIcon = 'clock' | 'users' | 'pin';
+
+export interface HeroInfoItem {
+  _key: string;
+  icon: HeroInfoIcon;
+  text: string;
 }
 
 export interface AnkerpunktSection {
@@ -186,6 +226,7 @@ export interface HomePage {
   heroHeading: string;
   heroText?: string;
   heroImage?: SanityImageData;
+  heroInfoItems?: HeroInfoItem[];
   primaryButton?: CtaLink;
   secondaryButton?: CtaLink;
   featuredNews?: NewsSummary[];

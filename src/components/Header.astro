@@ -26,33 +26,23 @@ function isActive(href: string) {
 }
 
 const churchName = settings?.churchName ?? 'Ankerpunkt';
-const logoUrl = settings?.logo?.asset ? urlFor(settings.logo).width(96).height(96).fit('crop').url() : null;
+// Build the URL from the asset alone (not the full image value) so no crop/hotspot metadata can ever be applied to the logo.
+const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).fit('max').url() : null;
 ---
 
 <header class="sticky top-0 z-40 border-b border-ink/8 bg-paper/95 backdrop-blur-md">
   <Container class="flex h-18 items-center justify-between sm:h-20">
-    <a href="/" class="flex items-center gap-3">
+    <a href="/" class="flex items-center">
       {
         logoUrl ? (
-          <img src={logoUrl} alt={churchName} width="42" height="42" class="h-10 w-10 rounded-full object-cover ring-1 ring-ink/10" />
+          <img src={logoUrl} alt={churchName} class="h-11 w-auto object-contain sm:h-14" />
         ) : (
-          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-anchor-800 text-paper ring-1 ring-ink/10">
-            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" aria-hidden="true">
-              <path
-                d="M12 3v18M12 21c-4 0-7-2.5-7-6h2a5 5 0 0 0 10 0h2c0 3.5-3 6-7 6ZM9 6h6M12 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+          <span class="flex flex-col leading-none">
+            <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
+            <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">MG Rengsdorf</span>
           </span>
         )
       }
-      <span class="flex flex-col leading-none">
-        <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
-        <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">MG Rengsdorf</span>
-      </span>
     </a>
 
     <nav aria-label="Hauptnavigation" class="hidden lg:block">

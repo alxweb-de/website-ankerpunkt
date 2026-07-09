@@ -22,7 +22,7 @@ if (!event) {
   return Astro.redirect('/veranstaltungen');
 }
 
-const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).height(900).fit('crop').url() : null;
+const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).fit('max').url() : null;
 const isBookable = event.status === 'planned' && event.registrationLink;
 ---
 
@@ -44,12 +44,18 @@ const isBookable = event.status === 'planned' && event.registrationLink;
       <h1 class="mt-4 font-display text-3xl font-medium text-ink sm:text-4xl">{event.title}</h1>
       <p class="mt-4 text-lg leading-relaxed text-ink-soft">{event.excerpt}</p>
 
-      <div class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
+      <div class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
         {
           imageUrl ? (
-            <img src={imageUrl} alt={event.coverImage?.alt ?? ''} class="h-full w-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={event.coverImage?.alt ?? ''}
+              class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain"
+            />
           ) : (
-            <PlaceholderImage class="h-full w-full" label={event.title} />
+            <div class="aspect-[16/9] overflow-hidden rounded-2xl">
+              <PlaceholderImage class="h-full w-full" label={event.title} />
+            </div>
           )
         }
       </div>

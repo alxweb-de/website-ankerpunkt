@@ -1,4 +1,4 @@
-import type { EventStatus, SocialPlatform, Weekday } from './sanity/types';
+import type { EventStatus, RecurringEventSummary, ScheduleEntry, SocialPlatform, Weekday } from './sanity/types';
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit',
@@ -79,6 +79,51 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   soldOut: 'Ausverkauft',
   cancelled: 'Abgesagt',
 };
+
+export function formatScheduleTime(entry: Pick<ScheduleEntry, 'timeFrom' | 'timeTo'>): string {
+  return entry.timeTo ? `${entry.timeFrom}–${entry.timeTo} Uhr` : `${entry.timeFrom} Uhr`;
+}
+
+/**
+ * Compact one-line summary for cards, e.g. "Dienstag · 16:00–17:30 Uhr" (single entry),
+ * "Dienstag · 16:00–18:00 Uhr" (several entries, same weekday), "Montag & Donnerstag"
+ * (two weekdays) or "Mehrere Termine" (more than two). Falls back to the legacy
+ * weekday/time fields for records that don't have a `schedule` list yet.
+ */
+export function summarizeSchedule(event: Pick<RecurringEventSummary, 'schedule' | 'weekday' | 'time'>): string | null {
+  const entries = event.schedule;
+
+  if (entries && entries.length > 0) {
+    const weekdayOrder: Weekday[] = [];
+    for (const entry of entries) {
+      if (!weekdayOrder.includes(entry.weekday)) weekdayOrder.push(entry.weekday);
+    }
+
+    if (weekdayOrder.length > 2) {
+      return 'Mehrere Termine';
+    }
+
+    if (weekdayOrder.length === 2) {
+      return weekdayOrder.map((day) => WEEKDAY_LABELS[day]).join(' & ');
+    }
+
+    const weekdayLabel = WEEKDAY_LABELS[weekdayOrder[0]];
+
+    if (entries.length === 1) {
+      return `${weekdayLabel} · ${formatScheduleTime(entries[0])}`;
+    }
+
+    const earliestStart = [...entries].map((entry) => entry.timeFrom).sort()[0];
+    const latestEnd = [...entries].map((entry) => entry.timeTo || entry.timeFrom).sort().at(-1);
+    return `${weekdayLabel} · ${earliestStart}–${latestEnd} Uhr`;
+  }
+
+  if (event.weekday && event.time) {
+    return `${WEEKDAY_LABELS[event.weekday]} · ${event.time}`;
+  }
+
+  return null;
+}
 
 export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
   facebook: 'Facebook',

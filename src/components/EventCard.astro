@@ -12,9 +12,10 @@ interface Props {
 }
 
 const { event, class: className = '' } = Astro.props;
-const imageUrl = event.coverImage?.asset
-  ? urlFor(event.coverImage).width(640).height(420).fit('crop').url()
-  : null;
+const displayMode = event.coverImage?.displayMode ?? 'contain';
+const cropPosition = event.coverImage?.cropPosition ?? 'center';
+const objectPositionClass = { top: 'object-top', center: 'object-center', bottom: 'object-bottom' }[cropPosition];
+const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(800).fit('max').url() : null;
 
 const date = new Date(event.startDateTime);
 const day = date.getDate();
@@ -30,14 +31,17 @@ const accentByStatus: Record<EventStatus, string> = {
 <a href={`/veranstaltungen/${event.slug.current}`} class:list={['group flex flex-col overflow-hidden card-shell', className]}>
   <span class:list={['block h-1 w-full', accentByStatus[event.status]]} aria-hidden="true" />
 
-  <MediaFrame class="aspect-[16/10] w-full">
+  <MediaFrame class:list={['aspect-[16/10] w-full', displayMode === 'contain' && 'bg-anchor-50/60']}>
     {
       imageUrl ? (
         <img
           src={imageUrl}
           alt={event.coverImage?.alt ?? ''}
           loading="lazy"
-          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          class:list={[
+            'h-full w-full transition-transform duration-500 group-hover:scale-105',
+            displayMode === 'contain' ? 'object-contain p-3' : ['object-cover', objectPositionClass],
+          ]}
         />
       ) : (
         <PlaceholderImage class="h-full w-full transition-transform duration-500 group-hover:scale-105" label={event.title} />

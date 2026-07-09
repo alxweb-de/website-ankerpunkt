@@ -29,11 +29,22 @@ const seoFragment = /* groq */ `{ title, description }`;
 
 const newsCategoryFragment = /* groq */ `{ _id, title, slug }`;
 
+const eventImageFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    metadata { lqip, dimensions { width, height } }
+  },
+  alt,
+  displayMode,
+  cropPosition
+}`;
+
 const eventSummaryFragment = /* groq */ `{
   _id,
   title,
   slug,
-  "coverImage": coverImage${imageFragment},
+  "coverImage": coverImage${eventImageFragment},
   excerpt,
   startDateTime,
   endDateTime,
@@ -65,10 +76,57 @@ const groupSummaryFragment = /* groq */ `{
   isActive
 }`;
 
+const recurringEventImageFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    metadata { lqip, dimensions { width, height } }
+  },
+  alt,
+  hotspot,
+  crop,
+  displayMode,
+  cropPosition
+}`;
+
+const scheduleEntryFragment = /* groq */ `{
+  _key,
+  weekday,
+  timeFrom,
+  timeTo,
+  extra,
+  note
+}`;
+
+const recurringEventSummaryFragment = /* groq */ `{
+  _id,
+  title,
+  slug,
+  "mainImage": mainImage${recurringEventImageFragment},
+  "schedule": schedule[]${scheduleEntryFragment},
+  weekday,
+  time,
+  location,
+  targetAudience,
+  excerpt,
+  note,
+  isActive,
+  order
+}`;
+
+const logoImageFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    metadata { dimensions { width, height } }
+  },
+  alt
+}`;
+
 export const SETTINGS_QUERY = defineQuery(/* groq */ `
   *[_type == "settings"][0]{
     churchName,
-    "logo": logo${imageFragment},
+    "logo": logo${logoImageFragment},
     address,
     phone,
     email,
@@ -87,6 +145,11 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     heroHeading,
     heroText,
     "heroImage": heroImage${imageFragment},
+    heroInfoItems[]{
+      _key,
+      icon,
+      text
+    },
     "primaryButton": primaryButton${ctaFragment},
     "secondaryButton": secondaryButton${ctaFragment},
     "featuredNews": featuredNews[]->${newsSummaryFragment},
@@ -119,7 +182,7 @@ export const EVENT_BY_SLUG_QUERY = defineQuery(/* groq */ `
     _id,
     title,
     slug,
-    "coverImage": coverImage${imageFragment},
+    "coverImage": coverImage${eventImageFragment},
     excerpt,
     body[]{
       ...,
@@ -191,18 +254,34 @@ export const GROUP_SLUGS_QUERY = defineQuery(/* groq */ `
 `);
 
 export const RECURRING_EVENTS_QUERY = defineQuery(/* groq */ `
-  *[_type == "recurringEvent" && isActive == true] | order(order asc){
+  *[_type == "recurringEvent" && isActive == true] | order(order asc)${recurringEventSummaryFragment}
+`);
+
+export const RECURRING_EVENT_BY_SLUG_QUERY = defineQuery(/* groq */ `
+  *[_type == "recurringEvent" && slug.current == $slug][0]{
     _id,
     title,
+    slug,
+    "mainImage": mainImage${recurringEventImageFragment},
+    "schedule": schedule[]${scheduleEntryFragment},
     weekday,
     time,
     location,
     targetAudience,
     excerpt,
-    "contactPerson": contactPerson->${personFragment},
+    note,
+    body[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    "contactPersons": contactPersons[]->${personFragment},
     isActive,
     order
   }
+`);
+
+export const RECURRING_EVENT_SLUGS_QUERY = defineQuery(/* groq */ `
+  *[_type == "recurringEvent" && isActive == true && defined(slug.current)]{ "slug": slug.current }
 `);
 
 export const ACTIVE_PEOPLE_QUERY = defineQuery(/* groq */ `

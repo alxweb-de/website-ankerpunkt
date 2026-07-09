@@ -10,6 +10,8 @@ import {
   NEWS_BY_SLUG_QUERY,
   NEWS_LIST_QUERY,
   NEWS_SLUGS_QUERY,
+  RECURRING_EVENT_BY_SLUG_QUERY,
+  RECURRING_EVENT_SLUGS_QUERY,
   RECURRING_EVENTS_QUERY,
   SETTINGS_QUERY,
   UPCOMING_EVENTS_LIMIT_QUERY,
@@ -24,7 +26,8 @@ import type {
   NewsDetail,
   NewsSummary,
   PersonSummary,
-  RecurringEvent,
+  RecurringEventDetail,
+  RecurringEventSummary,
   Settings,
 } from './types';
 
@@ -77,7 +80,15 @@ export async function getGroupSlugs() {
 }
 
 export async function getRecurringEvents() {
-  return sanityClient.fetch<RecurringEvent[]>(RECURRING_EVENTS_QUERY);
+  return sanityClient.fetch<RecurringEventSummary[]>(RECURRING_EVENTS_QUERY);
+}
+
+export async function getRecurringEventBySlug(slug: string) {
+  return sanityClient.fetch<RecurringEventDetail | null>(RECURRING_EVENT_BY_SLUG_QUERY, { slug });
+}
+
+export async function getRecurringEventSlugs() {
+  return sanityClient.fetch<{ slug: string }[]>(RECURRING_EVENT_SLUGS_QUERY);
 }
 
 export async function getActivePeople() {

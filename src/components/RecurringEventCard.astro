@@ -1,0 +1,73 @@
+---
+import MediaFrame from './MediaFrame.astro';
+import PlaceholderImage from './PlaceholderImage.astro';
+import { urlFor } from '../lib/sanity/image';
+import { summarizeSchedule } from '../lib/format';
+import type { RecurringEventSummary } from '../lib/sanity/types';
+
+interface Props {
+  event: RecurringEventSummary;
+  class?: string;
+}
+
+const { event, class: className = '' } = Astro.props;
+const displayMode = event.mainImage?.displayMode ?? 'contain';
+const cropPosition = event.mainImage?.cropPosition ?? 'center';
+const objectPositionClass = { top: 'object-top', center: 'object-center', bottom: 'object-bottom' }[cropPosition];
+const scheduleSummary = summarizeSchedule(event);
+
+const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(800).fit('max').url() : null;
+
+const href = event.slug?.current ? `/regelmaessige-veranstaltungen/${event.slug.current}` : undefined;
+const Tag = href ? 'a' : 'div';
+---
+
+<Tag href={href} class:list={['group flex flex-col overflow-hidden card-shell', className]}>
+  <MediaFrame class:list={['aspect-[16/10] w-full', displayMode === 'contain' && 'bg-anchor-50/60']}>
+    {
+      imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={event.mainImage?.alt ?? ''}
+          loading="lazy"
+          class:list={[
+            'h-full w-full transition-transform duration-500 group-hover:scale-105',
+            displayMode === 'contain' ? 'object-contain p-3' : ['object-cover', objectPositionClass],
+          ]}
+        />
+      ) : (
+        <PlaceholderImage class="h-full w-full transition-transform duration-500 group-hover:scale-105" label={event.title} />
+      )
+    }
+    {event.note && (
+      <span class="absolute top-4 left-4 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-anchor-800 shadow-sm">
+        {event.note}
+      </span>
+    )}
+  </MediaFrame>
+  <div class="flex flex-1 flex-col gap-2.5 p-6">
+    {scheduleSummary && (
+      <p class="flex min-w-0 items-center gap-1.5 text-sm text-ink-soft/80">
+        <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0 text-anchor-600" aria-hidden="true">
+          <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3" />
+          <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+        </svg>
+        <span class="truncate">{scheduleSummary}</span>
+      </p>
+    )}
+    <h3 class="font-display text-xl font-medium text-ink">{event.title}</h3>
+    {event.excerpt && <p class="line-clamp-2 text-sm leading-relaxed text-ink-soft">{event.excerpt}</p>}
+    {
+      href && (
+        <div class="mt-auto flex items-center justify-end border-t border-ink/8 pt-3">
+          <span class="flex shrink-0 items-center gap-1 text-sm font-medium text-anchor-700">
+            Mehr erfahren
+            <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </div>
+      )
+    }
+  </div>
+</Tag>

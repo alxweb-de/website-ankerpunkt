@@ -5,7 +5,6 @@ import CtaButton from '../components/CtaButton.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import NewsCard from '../components/NewsCard.astro';
 import EventCard from '../components/EventCard.astro';
-import MediaFrame from '../components/MediaFrame.astro';
 import PlaceholderImage from '../components/PlaceholderImage.astro';
 import RecurringEventCard from '../components/RecurringEventCard.astro';
 import { urlFor } from '../lib/sanity/image';
@@ -25,31 +24,189 @@ const featuredNews = homePage?.featuredNews?.length
   ? homePage.featuredNews
   : (await getNewsList()).slice(0, 3);
 
-const heroImageUrl = homePage?.heroImage?.asset
-  ? urlFor(homePage.heroImage).width(1400).fit('max').auto('format').url()
-  : null;
+const hasHeroBackground = Boolean(homePage?.heroBackgroundImage?.asset);
 
-const ankerpunktImageUrl = homePage?.ankerpunktSection?.image?.asset
-  ? urlFor(homePage.ankerpunktSection.image).width(900).height(1100).fit('crop').url()
+const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
+const heroBackgroundImageUrl = hasHeroBackground
+  ? urlFor(homePage!.heroBackgroundImage!).width(2000).quality(82).auto('format').fit('max').url()
   : null;
+const heroBackgroundSrcset = hasHeroBackground
+  ? HERO_BG_WIDTHS.map(
+      (w) => `${urlFor(homePage!.heroBackgroundImage!).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
+    ).join(', ')
+  : undefined;
 
-const livestreamUrl = homePage?.livestreamSection?.overrideUrl ?? settings?.livestreamUrl;
-const showLivestream = homePage?.livestreamSection?.isVisible && livestreamUrl;
+// CSS object-position value. "center center" is special-cased to sit a bit lower so foreground
+// objects (cup, vase, table) stay in frame instead of being cropped at the bottom on desktop.
+const HERO_BG_POSITION_STYLE: Record<string, string> = {
+  'center center': 'center 55%',
+  'center top': 'center top',
+  'center bottom': 'center bottom',
+  'left center': 'left center',
+  'right center': 'right center',
+};
+const heroBackgroundPositionStyle =
+  HERO_BG_POSITION_STYLE[homePage?.heroBackgroundPosition ?? 'center center'] ?? 'center 55%';
+
+const HERO_TEXT_WIDTH_CLASS: Record<string, string> = {
+  narrow: 'lg:max-w-[440px]',
+  normal: 'lg:max-w-[560px]',
+  wide: 'lg:max-w-[680px]',
+};
+const heroTextWidthClass = HERO_TEXT_WIDTH_CLASS[homePage?.heroTextWidth ?? 'normal'] ?? HERO_TEXT_WIDTH_CLASS.normal;
+
+const heroOverlayOpacity = Math.min(Math.max(homePage?.heroBackgroundOverlay ?? 0, 0), 60) / 100;
+
+const heroShowBottomFade = hasHeroBackground && homePage?.heroBottomFade !== false;
+
+// Exact site background color (--color-paper, #faf9f6) so the fade ends
+// on precisely the same tone as the next section — no visible seam.
+const PAPER_RGB = '250,249,246';
+
+// The fade lives entirely inside the hero's own box (bottom: 0, no overlap into the next section).
+const HERO_BOTTOM_FADE_GRADIENT: Record<string, string> = {
+  subtle: `linear-gradient(to bottom,
+    rgba(${PAPER_RGB},0) 0%,
+    rgba(${PAPER_RGB},0.03) 20%,
+    rgba(${PAPER_RGB},0.08) 38%,
+    rgba(${PAPER_RGB},0.18) 55%,
+    rgba(${PAPER_RGB},0.34) 72%,
+    rgba(${PAPER_RGB},0.58) 88%,
+    rgb(${PAPER_RGB}) 100%)`,
+  medium: `linear-gradient(to bottom,
+    rgba(${PAPER_RGB},0) 0%,
+    rgba(${PAPER_RGB},0.05) 18%,
+    rgba(${PAPER_RGB},0.14) 34%,
+    rgba(${PAPER_RGB},0.30) 50%,
+    rgba(${PAPER_RGB},0.52) 66%,
+    rgba(${PAPER_RGB},0.76) 82%,
+    rgb(${PAPER_RGB}) 100%)`,
+  strong: `linear-gradient(to bottom,
+    rgba(${PAPER_RGB},0) 0%,
+    rgba(${PAPER_RGB},0.06) 15%,
+    rgba(${PAPER_RGB},0.16) 30%,
+    rgba(${PAPER_RGB},0.32) 46%,
+    rgba(${PAPER_RGB},0.54) 62%,
+    rgba(${PAPER_RGB},0.78) 78%,
+    rgba(${PAPER_RGB},0.94) 92%,
+    rgb(${PAPER_RGB}) 100%)`,
+};
+
+const HERO_BOTTOM_FADE_HEIGHT: Record<string, number> = {
+  subtle: 140,
+  medium: 180,
+  strong: 220,
+};
+
+const heroBottomFadeStrength = homePage?.heroBottomFadeStrength ?? 'medium';
+const heroBottomFadeGradient = HERO_BOTTOM_FADE_GRADIENT[heroBottomFadeStrength] ?? HERO_BOTTOM_FADE_GRADIENT.medium;
+const heroBottomFadeHeight = HERO_BOTTOM_FADE_HEIGHT[heroBottomFadeStrength] ?? HERO_BOTTOM_FADE_HEIGHT.medium;
+const heroBottomFadeStyle = `position: absolute; left: 0; right: 0; bottom: 0; height: ${heroBottomFadeHeight}px; background: ${heroBottomFadeGradient};`;
+
+const heroLeftGradientDesktop =
+  'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.94) 32%, rgba(248,245,238,0.72) 48%, rgba(248,245,238,0.22) 65%, rgba(248,245,238,0) 78%)';
+const heroLeftGradientCompact =
+  'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.95) 40%, rgba(248,245,238,0.85) 58%, rgba(248,245,238,0.55) 72%, rgba(248,245,238,0.15) 88%, rgba(248,245,238,0) 100%)';
+
+const aboutVisible = homePage?.aboutSectionVisible !== false;
+const aboutEyebrow = homePage?.aboutEyebrow || 'ÜBER UNS';
+const aboutHeadline = homePage?.aboutHeadline || 'Was ist Ankerpunkt?';
+const aboutText = homePage?.aboutText || 'Ankerpunkt ist ein offener Ort für Begegnung, Gemeinschaft und Glauben.';
+const showAboutButton = Boolean(homePage?.aboutButtonText && homePage?.aboutButtonLink);
+
+// CSS object-position for the media panel (ca. 60% width, not full-bleed). "center center" is
+// special-cased to "left top" so heads in the group photo stay in frame — the media panel is
+// narrower than a full-bleed background, so aggressive top/bottom cropping is no longer needed.
+const ABOUT_MEDIA_POSITION_STYLE: Record<string, string> = {
+  'center center': 'left top',
+  'center top': 'center top',
+  'center bottom': 'center bottom',
+  'left center': 'left center',
+  'right center': 'right center',
+};
+const aboutMediaPositionStyle =
+  ABOUT_MEDIA_POSITION_STYLE[homePage?.aboutImagePosition ?? 'center center'] ?? 'left top';
+
+const ABOUT_MEDIA_WIDTHS = [480, 720, 960, 1440];
+const aboutMediaImageUrl = homePage?.aboutImage?.asset
+  ? urlFor(homePage.aboutImage).width(1440).quality(82).auto('format').fit('max').url()
+  : null;
+const aboutMediaSrcset = homePage?.aboutImage?.asset
+  ? ABOUT_MEDIA_WIDTHS.map(
+      (w) => `${urlFor(homePage!.aboutImage!).width(w).quality(w <= 720 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
+    ).join(', ')
+  : undefined;
+
+// Soft transition from the photo into the neutral text panel: stays close to transparent for a
+// while, then ramps up gradually, only reaching full opacity right at the panel edge — a fixed
+// width (not a percentage of the photo) keeps it from washing out people near the fade zone.
+// Ends on the exact same tone as the text panel's own background (--color-paper, #faf9f6).
+const aboutMediaFadeGradient =
+  'linear-gradient(90deg, rgba(250,249,246,0) 0%, rgba(250,249,246,0.04) 30%, rgba(250,249,246,0.14) 55%, rgba(250,249,246,0.36) 75%, rgba(250,249,246,0.66) 88%, rgba(250,249,246,0.90) 96%, rgb(250,249,246) 100%)';
+
+const showLivestream = Boolean(homePage?.livestreamVisible && (homePage?.livestreamUrl || homePage?.livestreamEmbedUrl));
+const livestreamLinkUrl = homePage?.livestreamUrl || homePage?.livestreamEmbedUrl;
 
 const heroInfoItems = homePage?.heroInfoItems ?? [];
+const visitAddress = settings?.visitAddress ?? settings?.address;
 ---
 
 <BaseLayout title="Willkommen">
-  <section class="relative overflow-hidden">
-    <div
-      class="bg-dot-grid pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_0%,black,transparent)]"
-    >
-    </div>
-    <div class="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-sand-200/40 blur-3xl"></div>
-    <div class="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-anchor-100/60 blur-3xl"></div>
+  <section
+    class:list={[
+      'relative overflow-hidden',
+      hasHeroBackground ? 'flex min-h-[700px] items-center' : '',
+    ]}
+  >
+    {/* Hero-Background: fills the hero's own box exactly (inset-0), nothing more. */}
+    <div class="absolute inset-0 z-0">
+      {
+        !hasHeroBackground && (
+          <>
+            <div class="bg-dot-grid pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_0%,black,transparent)]" />
+            <div class="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-sand-200/40 blur-3xl" />
+            <div class="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-anchor-100/60 blur-3xl" />
+          </>
+        )
+      }
 
-    <Container class="relative grid grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24">
-      <div class="motion-safe:animate-fade-up">
+      {
+        hasHeroBackground && (
+          <>
+            <img
+              src={heroBackgroundImageUrl!}
+              srcset={heroBackgroundSrcset}
+              sizes="100vw"
+              alt={homePage?.heroBackgroundAlt ?? ''}
+              class="absolute inset-0 h-full w-full object-cover"
+              style={`object-position: ${heroBackgroundPositionStyle};`}
+              fetchpriority="high"
+            />
+            {/* 1. dezenter allgemeiner heller Schleier */}
+            <div class="absolute inset-0 bg-paper/15" />
+            {/* 2. linker cremefarbener Verlauf für Textlesbarkeit (Desktop / Tablet+Mobile) */}
+            <div class="absolute inset-0 hidden lg:block" style={`background: ${heroLeftGradientDesktop};`} />
+            <div class="absolute inset-0 lg:hidden" style={`background: ${heroLeftGradientCompact};`} />
+            {/* 3. optionale zusätzliche Abdunklung */}
+            {heroOverlayOpacity > 0 && (
+              <div class="absolute inset-0 bg-ink" style={`opacity: ${heroOverlayOpacity};`} />
+            )}
+            {/* 4. weicher Übergang nach unten — bleibt vollständig innerhalb des Hero */}
+            {heroShowBottomFade && <div class="pointer-events-none" style={heroBottomFadeStyle} />}
+          </>
+        )
+      }
+    </div>
+
+    <Container
+      class:list={[
+        'relative z-10',
+        hasHeroBackground
+          ? 'py-20 lg:py-28'
+          : 'grid grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24',
+      ]}
+    >
+      <div class:list={['motion-safe:animate-fade-up', hasHeroBackground && ['max-w-full sm:max-w-xl', heroTextWidthClass]]}>
         {
           homePage?.heroEyebrow && (
             <p class="flex items-center gap-2 text-sm font-semibold tracking-wide text-anchor-600 uppercase">
@@ -110,22 +267,15 @@ const heroInfoItems = homePage?.heroInfoItems ?? [];
         }
       </div>
 
-      <div class="motion-safe:animate-fade-up motion-safe:[animation-delay:150ms]">
-        <div class="relative mx-auto w-full max-w-xl lg:max-w-none">
-          {
-            heroImageUrl ? (
-              <img
-                src={heroImageUrl}
-                alt={homePage?.heroImage?.alt ?? ''}
-                class="h-auto w-full object-contain"
-                fetchpriority="high"
-              />
-            ) : (
+      {
+        !hasHeroBackground && (
+          <div class="motion-safe:animate-fade-up motion-safe:[animation-delay:150ms]">
+            <div class="relative mx-auto w-full max-w-xl lg:max-w-none">
               <PlaceholderImage class="aspect-[4/5] w-full rounded-3xl" label="Ankerpunkt Gemeindehaus in Rengsdorf" />
-            )
-          }
-        </div>
-      </div>
+            </div>
+          </div>
+        )
+      }
     </Container>
   </section>
 
@@ -196,25 +346,41 @@ const heroInfoItems = homePage?.heroInfoItems ?? [];
   }
 
   {
-    homePage?.ankerpunktSection && (homePage.ankerpunktSection.heading || homePage.ankerpunktSection.text) && (
-      <section class="border-t border-ink/8 bg-paper-muted py-20">
-        <Container class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div class="order-2 lg:order-1">
-            <MediaFrame class="aspect-[4/5] w-full rounded-3xl shadow-lg shadow-anchor-900/10">
-              {ankerpunktImageUrl ? (
-                <img src={ankerpunktImageUrl} alt={homePage.ankerpunktSection.image?.alt ?? ''} class="h-full w-full object-cover" loading="lazy" />
-              ) : (
-                <PlaceholderImage class="h-full w-full" label="Was ist Ankerpunkt?" />
-              )}
-            </MediaFrame>
-          </div>
-          <div class="order-1 lg:order-2">
-            <SectionHeading eyebrow="Über uns" heading={homePage.ankerpunktSection.heading ?? 'Was ist Ankerpunkt?'} text={homePage.ankerpunktSection.text} />
-            {homePage.ankerpunktSection.link && (
-              <div class="mt-8">
-                <CtaButton href={homePage.ankerpunktSection.link.url}>{homePage.ankerpunktSection.link.label}</CtaButton>
-              </div>
+    aboutVisible && (
+      <section class="border-t border-ink/8 bg-paper-muted">
+        <Container class="flex flex-col md:min-h-[560px] md:flex-row md:items-stretch">
+          {/* Bildbereich: ca. 57% Breite (Tablet ca. 55%), kein vollflächiges Hintergrundbild. */}
+          <div class="relative aspect-[4/3] w-full overflow-hidden md:aspect-auto md:w-[55%] lg:w-[57%]">
+            {homePage?.aboutImage?.asset ? (
+              <img
+                src={aboutMediaImageUrl!}
+                srcset={aboutMediaSrcset}
+                sizes="(min-width: 768px) 57vw, 100vw"
+                alt={homePage?.aboutImageAlt ?? ''}
+                class="absolute inset-0 h-full w-full object-cover"
+                style={`object-position: ${aboutMediaPositionStyle};`}
+                loading="lazy"
+              />
+            ) : (
+              <PlaceholderImage class="absolute inset-0 h-full w-full" label={aboutHeadline} />
             )}
+            {/* weicher, breiterer Übergang zum neutralen Textbereich, nur wo der Bereich geteilt ist */}
+            <div
+              class="absolute inset-y-0 right-0 hidden md:block md:w-[120px] lg:w-[160px]"
+              style={`background: ${aboutMediaFadeGradient};`}
+            />
+          </div>
+
+          {/* Textbereich: ca. 43% Breite, ruhige Papierfläche, mehr Abstand zum Bild und zum Rand */}
+          <div class="flex w-full items-center bg-paper px-6 py-12 sm:px-8 md:w-[45%] md:px-12 md:py-16 lg:w-[43%] lg:px-16">
+            <div class="w-full max-w-[480px]">
+              <SectionHeading eyebrow={aboutEyebrow} heading={aboutHeadline} text={aboutText} />
+              {showAboutButton && (
+                <div class="mt-8">
+                  <CtaButton href={homePage!.aboutButtonLink!}>{homePage!.aboutButtonText}</CtaButton>
+                </div>
+              )}
+            </div>
           </div>
         </Container>
       </section>
@@ -232,12 +398,13 @@ const heroInfoItems = homePage?.heroInfoItems ?? [];
             </svg>
           </span>
           <SectionHeading
-            heading={homePage?.livestreamSection?.heading || 'Gottesdienst per Livestream verfolgen'}
-            text={homePage?.livestreamSection?.text}
+            eyebrow={homePage?.livestreamEyebrow}
+            heading={homePage?.livestreamHeadline || 'Gottesdienst per Livestream verfolgen'}
+            text={homePage?.livestreamText}
             align="center"
             class="text-paper [&_p]:text-anchor-100 [&_h2]:text-paper"
           />
-          <CtaButton href={livestreamUrl!} variant="inverse">Zum Livestream</CtaButton>
+          <CtaButton href={livestreamLinkUrl!} variant="inverse">{homePage?.livestreamButtonText || 'Zum Livestream'}</CtaButton>
         </Container>
       </section>
     )
@@ -247,22 +414,29 @@ const heroInfoItems = homePage?.heroInfoItems ?? [];
     <Container class="rounded-3xl bg-anchor-50 px-8 py-12 ring-1 ring-anchor-100 sm:px-16">
       <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
         <div>
-          <SectionHeading eyebrow="Besuch uns" heading="Wir freuen uns auf dich" text="Ob zum Gottesdienst, einer Veranstaltung oder einfach auf einen Kaffee – komm gerne vorbei." />
+          <SectionHeading
+            eyebrow="Besuch uns"
+            heading={settings?.visitHeading || 'Wir freuen uns auf dich'}
+            text={settings?.visitText || 'Ob zum Gottesdienst, einer Veranstaltung oder einfach auf einen Kaffee – komm gerne vorbei.'}
+          />
+          {settings?.visitNote && <p class="mt-4 text-ink-soft">{settings.visitNote}</p>}
           <div class="mt-8">
-            <CtaButton href="/kontakt">Kontakt aufnehmen</CtaButton>
+            <CtaButton href={settings?.visitButton?.url || '/kontakt'}>
+              {settings?.visitButton?.label || 'Kontakt aufnehmen'}
+            </CtaButton>
           </div>
         </div>
         <div class="space-y-4 text-ink-soft">
           {
-            settings?.address && (
+            visitAddress && (
               <p class="flex items-start gap-3">
                 <svg viewBox="0 0 16 16" fill="none" class="mt-0.5 h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
                   <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
                   <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
                 </svg>
                 <span>
-                  {settings.address.street}<br />
-                  {settings.address.zip} {settings.address.city}
+                  {visitAddress.street}<br />
+                  {visitAddress.zip} {visitAddress.city}
                 </span>
               </p>
             )

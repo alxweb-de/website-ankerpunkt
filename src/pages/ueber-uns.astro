@@ -11,9 +11,8 @@ const homePage = await getHomePage();
 const settings = await getSettings();
 const people = await getActivePeople();
 
-const ankerpunktSection = homePage?.ankerpunktSection;
-const imageUrl = ankerpunktSection?.image?.asset
-  ? urlFor(ankerpunktSection.image).width(1000).height(1200).fit('crop').url()
+const imageUrl = homePage?.aboutImage?.asset
+  ? urlFor(homePage.aboutImage).width(1000).height(1200).fit('crop').url()
   : null;
 ---
 
@@ -26,7 +25,7 @@ const imageUrl = ankerpunktSection?.image?.asset
       <div class="aspect-[4/5] overflow-hidden rounded-3xl">
         {
           imageUrl ? (
-            <img src={imageUrl} alt={ankerpunktSection?.image?.alt ?? ''} class="h-full w-full object-cover" />
+            <img src={imageUrl} alt={homePage?.aboutImageAlt ?? ''} class="h-full w-full object-cover" />
           ) : (
             <PlaceholderImage class="h-full w-full" label="Über uns" />
           )
@@ -35,8 +34,8 @@ const imageUrl = ankerpunktSection?.image?.asset
       <div>
         <SectionHeading
           eyebrow="Über uns"
-          heading={ankerpunktSection?.heading || `Was ist ${settings?.churchName ?? 'Ankerpunkt'}?`}
-          text={ankerpunktSection?.text || 'Wir sind eine lebendige Gemeinde, die Menschen jeden Alters auf ihrem Glaubensweg begleitet.'}
+          heading={homePage?.aboutHeadline || `Was ist ${settings?.churchName ?? 'Ankerpunkt'}?`}
+          text={homePage?.aboutText || 'Wir sind eine lebendige Gemeinde, die Menschen jeden Alters auf ihrem Glaubensweg begleitet.'}
         />
         <div class="mt-8">
           <CtaButton href="/kontakt">Kontakt aufnehmen</CtaButton>

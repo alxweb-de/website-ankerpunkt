@@ -126,14 +126,35 @@ const logoImageFragment = /* groq */ `{
 export const SETTINGS_QUERY = defineQuery(/* groq */ `
   *[_type == "settings"][0]{
     churchName,
+    tagline,
     "logo": logo${logoImageFragment},
     address,
     phone,
     email,
     officeHours,
+    "contactPerson": contactPerson->${personFragment},
+    mapsUrl,
+    visitHeading,
+    visitText,
+    visitAddress,
+    visitNote,
+    "visitButton": visitButton${ctaFragment},
     socialLinks,
     livestreamUrl,
     footerText,
+    legalEntityName,
+    legalRepresentative,
+    legalAddress,
+    legalEmail,
+    legalPhone,
+    imprintText[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    privacyText[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
     imprintUrl,
     privacyUrl
   }
@@ -144,7 +165,13 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     heroEyebrow,
     heroHeading,
     heroText,
-    "heroImage": heroImage${imageFragment},
+    "heroBackgroundImage": heroBackgroundImage${imageFragment},
+    heroBackgroundAlt,
+    heroBackgroundPosition,
+    heroBackgroundOverlay,
+    heroTextWidth,
+    heroBottomFade,
+    heroBottomFadeStrength,
     heroInfoItems[]{
       _key,
       icon,
@@ -154,18 +181,24 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     "secondaryButton": secondaryButton${ctaFragment},
     "featuredNews": featuredNews[]->${newsSummaryFragment},
     "featuredEvents": featuredEvents[]->${eventSummaryFragment},
-    ankerpunktSection{
-      heading,
-      text,
-      "image": image${imageFragment},
-      "link": link${ctaFragment}
-    },
-    livestreamSection{
-      isVisible,
-      heading,
-      text,
-      overrideUrl
-    }
+    aboutSectionVisible,
+    aboutEyebrow,
+    aboutHeadline,
+    aboutText,
+    "aboutImage": aboutImage${imageFragment},
+    aboutImageAlt,
+    aboutImagePosition,
+    aboutImageCaption,
+    aboutButtonText,
+    aboutButtonLink,
+    livestreamVisible,
+    livestreamEyebrow,
+    livestreamHeadline,
+    livestreamText,
+    livestreamUrl,
+    livestreamButtonText,
+    livestreamEmbedUrl,
+    livestreamPlatform
   }
 `);
 

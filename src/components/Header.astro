@@ -39,7 +39,9 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
         ) : (
           <span class="flex flex-col leading-none">
             <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
-            <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">MG Rengsdorf</span>
+            {settings?.tagline && (
+              <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">{settings.tagline}</span>
+            )}
           </span>
         )
       }

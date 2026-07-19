@@ -2,10 +2,15 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
 import SectionHeading from '../components/SectionHeading.astro';
+import PortableTextContent from '../components/PortableTextContent.astro';
 import { getSettings } from '../lib/sanity/api';
 
 const settings = await getSettings();
 const churchName = settings?.churchName ?? 'Ankerpunkt';
+const legalName = settings?.legalEntityName || churchName;
+const legalAddress = settings?.legalAddress ?? settings?.address;
+const legalEmail = settings?.legalEmail || settings?.email;
+const legalPhone = settings?.legalPhone || settings?.phone;
 ---
 
 <BaseLayout title="Impressum" description={`Impressum von ${churchName}.`}>
@@ -15,37 +20,57 @@ const churchName = settings?.churchName ?? 'Ankerpunkt';
     <div class="prose-ankerpunkt prose mt-10 max-w-none">
       <h2>Angaben gemäß § 5 TMG</h2>
       <p>
-        {churchName}<br />
-        {settings?.address && (
+        {legalName}<br />
+        {legalAddress && (
           <>
-            {settings.address.street}<br />
-            {settings.address.zip} {settings.address.city}<br />
+            {legalAddress.street}<br />
+            {legalAddress.zip} {legalAddress.city}<br />
           </>
         )}
       </p>
 
       <h2>Vertreten durch</h2>
-      <p>[Bitte vertretungsberechtigte Person ergänzen]</p>
+      <p>
+        {settings?.legalRepresentative || (
+          <em>Bitte rechtlich prüfen und echte Angaben ergänzen.</em>
+        )}
+      </p>
 
       <h2>Kontakt</h2>
       <p>
-        {settings?.phone && (
+        {legalPhone && (
           <>
-            Telefon: {settings.phone}<br />
+            Telefon: {legalPhone}<br />
           </>
         )}
-        {settings?.email && <>E-Mail: {settings.email}</>}
+        {legalEmail && <>E-Mail: {legalEmail}</>}
       </p>
 
       <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
-      <p>[Bitte verantwortliche Person gemäß Medienstaatsvertrag ergänzen]</p>
-
-      <h2>Streitschlichtung</h2>
       <p>
-        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit. Wir sind nicht
-        verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
-        teilzunehmen.
+        {settings?.legalRepresentative || (
+          <em>Bitte rechtlich prüfen und echte Angaben ergänzen.</em>
+        )}
       </p>
     </div>
+
+    {
+      settings?.imprintText ? (
+        <PortableTextContent value={settings.imprintText} class="mt-6" />
+      ) : (
+        <div class="prose-ankerpunkt prose mt-6 max-w-none">
+          <h2>Streitschlichtung</h2>
+          <p>
+            Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit. Wir sind nicht
+            verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+            teilzunehmen.
+          </p>
+          <p class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+            Hinweis: Dies sind vorläufige Platzhaltertexte. Bitte rechtlich prüfen und echte Angaben in den
+            Globalen Einstellungen unter „Rechtliche Seiten“ ergänzen.
+          </p>
+        </div>
+      )
+    }
   </Container>
 </BaseLayout>

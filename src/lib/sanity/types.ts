@@ -207,44 +207,73 @@ export interface HeroInfoItem {
   text: string;
 }
 
-export interface AnkerpunktSection {
-  heading?: string;
-  text?: string;
-  image?: SanityImageData;
-  link?: CtaLink;
-}
-
-export interface LivestreamSection {
-  isVisible?: boolean;
-  heading?: string;
-  text?: string;
-  overrideUrl?: string;
-}
+export type HeroBackgroundPosition = 'center center' | 'center top' | 'center bottom' | 'left center' | 'right center';
+export type HeroTextWidth = 'narrow' | 'normal' | 'wide';
+export type HeroBottomFadeStrength = 'subtle' | 'medium' | 'strong';
+export type AboutImagePosition = HeroBackgroundPosition;
+export type LivestreamPlatform = 'youtube' | 'vimeo' | 'other';
 
 export interface HomePage {
   heroEyebrow?: string;
   heroHeading: string;
   heroText?: string;
-  heroImage?: SanityImageData;
+  heroBackgroundImage?: SanityImageData;
+  heroBackgroundAlt?: string;
+  heroBackgroundPosition?: HeroBackgroundPosition;
+  heroBackgroundOverlay?: number;
+  heroTextWidth?: HeroTextWidth;
+  heroBottomFade?: boolean;
+  heroBottomFadeStrength?: HeroBottomFadeStrength;
   heroInfoItems?: HeroInfoItem[];
   primaryButton?: CtaLink;
   secondaryButton?: CtaLink;
   featuredNews?: NewsSummary[];
   featuredEvents?: EventSummary[];
-  ankerpunktSection?: AnkerpunktSection;
-  livestreamSection?: LivestreamSection;
+  aboutSectionVisible?: boolean;
+  aboutEyebrow?: string;
+  aboutHeadline?: string;
+  aboutText?: string;
+  aboutImage?: SanityImageData;
+  aboutImageAlt?: string;
+  aboutImagePosition?: AboutImagePosition;
+  aboutImageCaption?: string;
+  aboutButtonText?: string;
+  aboutButtonLink?: string;
+  livestreamVisible?: boolean;
+  livestreamEyebrow?: string;
+  livestreamHeadline?: string;
+  livestreamText?: string;
+  livestreamUrl?: string;
+  livestreamButtonText?: string;
+  livestreamEmbedUrl?: string;
+  livestreamPlatform?: LivestreamPlatform;
 }
 
 export interface Settings {
   churchName: string;
+  tagline?: string;
   logo?: SanityImageData;
   address?: Address;
   phone?: string;
   email?: string;
   officeHours?: OfficeHours[];
+  contactPerson?: PersonSummary;
+  mapsUrl?: string;
+  visitHeading?: string;
+  visitText?: string;
+  visitAddress?: Address;
+  visitNote?: string;
+  visitButton?: CtaLink;
   socialLinks?: SocialLink[];
   livestreamUrl?: string;
   footerText?: string;
+  legalEntityName?: string;
+  legalRepresentative?: string;
+  legalAddress?: Address;
+  legalEmail?: string;
+  legalPhone?: string;
+  imprintText?: PortableTextValue;
+  privacyText?: PortableTextValue;
   imprintUrl?: string;
   privacyUrl?: string;
 }

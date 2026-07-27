@@ -1,5 +1,6 @@
 import { sanityClient } from './client';
 import {
+  ABOUT_PAGE_QUERY,
   ACTIVE_PEOPLE_QUERY,
   EVENT_BY_SLUG_QUERY,
   EVENT_SLUGS_QUERY,
@@ -18,6 +19,7 @@ import {
   UPCOMING_EVENTS_QUERY,
 } from './queries';
 import type {
+  AboutPage,
   EventDetail,
   EventSummary,
   GroupDetail,
@@ -37,6 +39,10 @@ export async function getSettings() {
 
 export async function getHomePage() {
   return sanityClient.fetch<HomePage | null>(HOME_PAGE_QUERY);
+}
+
+export async function getAboutPage() {
+  return sanityClient.fetch<AboutPage | null>(ABOUT_PAGE_QUERY);
 }
 
 export async function getUpcomingEvents() {

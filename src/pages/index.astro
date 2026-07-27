@@ -3,10 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
 import CtaButton from '../components/CtaButton.astro';
 import SectionHeading from '../components/SectionHeading.astro';
+import SectionHeaderRow from '../components/SectionHeaderRow.astro';
 import NewsCard from '../components/NewsCard.astro';
 import EventCard from '../components/EventCard.astro';
 import PlaceholderImage from '../components/PlaceholderImage.astro';
-import RecurringEventCard from '../components/RecurringEventCard.astro';
+import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
 import { urlFor } from '../lib/sanity/image';
 import { getHomePage, getNewsList, getRecurringEvents, getSettings, getUpcomingEventsLimited } from '../lib/sanity/api';
 
@@ -107,42 +108,6 @@ const heroLeftGradientDesktop =
   'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.94) 32%, rgba(248,245,238,0.72) 48%, rgba(248,245,238,0.22) 65%, rgba(248,245,238,0) 78%)';
 const heroLeftGradientCompact =
   'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.95) 40%, rgba(248,245,238,0.85) 58%, rgba(248,245,238,0.55) 72%, rgba(248,245,238,0.15) 88%, rgba(248,245,238,0) 100%)';
-
-const aboutVisible = homePage?.aboutSectionVisible !== false;
-const aboutEyebrow = homePage?.aboutEyebrow || 'ÜBER UNS';
-const aboutHeadline = homePage?.aboutHeadline || 'Was ist Ankerpunkt?';
-const aboutText = homePage?.aboutText || 'Ankerpunkt ist ein offener Ort für Begegnung, Gemeinschaft und Glauben.';
-const showAboutButton = Boolean(homePage?.aboutButtonText && homePage?.aboutButtonLink);
-
-// CSS object-position for the media panel (ca. 60% width, not full-bleed). "center center" is
-// special-cased to "left top" so heads in the group photo stay in frame — the media panel is
-// narrower than a full-bleed background, so aggressive top/bottom cropping is no longer needed.
-const ABOUT_MEDIA_POSITION_STYLE: Record<string, string> = {
-  'center center': 'left top',
-  'center top': 'center top',
-  'center bottom': 'center bottom',
-  'left center': 'left center',
-  'right center': 'right center',
-};
-const aboutMediaPositionStyle =
-  ABOUT_MEDIA_POSITION_STYLE[homePage?.aboutImagePosition ?? 'center center'] ?? 'left top';
-
-const ABOUT_MEDIA_WIDTHS = [480, 720, 960, 1440];
-const aboutMediaImageUrl = homePage?.aboutImage?.asset
-  ? urlFor(homePage.aboutImage).width(1440).quality(82).auto('format').fit('max').url()
-  : null;
-const aboutMediaSrcset = homePage?.aboutImage?.asset
-  ? ABOUT_MEDIA_WIDTHS.map(
-      (w) => `${urlFor(homePage!.aboutImage!).width(w).quality(w <= 720 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
-    ).join(', ')
-  : undefined;
-
-// Soft transition from the photo into the neutral text panel: stays close to transparent for a
-// while, then ramps up gradually, only reaching full opacity right at the panel edge — a fixed
-// width (not a percentage of the photo) keeps it from washing out people near the fade zone.
-// Ends on the exact same tone as the text panel's own background (--color-paper, #faf9f6).
-const aboutMediaFadeGradient =
-  'linear-gradient(90deg, rgba(250,249,246,0) 0%, rgba(250,249,246,0.04) 30%, rgba(250,249,246,0.14) 55%, rgba(250,249,246,0.36) 75%, rgba(250,249,246,0.66) 88%, rgba(250,249,246,0.90) 96%, rgb(250,249,246) 100%)';
 
 const showLivestream = Boolean(homePage?.livestreamVisible && (homePage?.livestreamUrl || homePage?.livestreamEmbedUrl));
 const livestreamLinkUrl = homePage?.livestreamUrl || homePage?.livestreamEmbedUrl;
@@ -281,10 +246,12 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 
   <section class="py-20">
     <Container>
-      <div class="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
-        <SectionHeading eyebrow="Termine" heading="Nächste Veranstaltungen" />
-        <CtaButton href="/veranstaltungen" variant="ghost">Alle Veranstaltungen ansehen →</CtaButton>
-      </div>
+      <SectionHeaderRow
+        eyebrow="Termine"
+        heading="Nächste Veranstaltungen"
+        linkHref="/veranstaltungen"
+        linkLabel="Alle Veranstaltungen ansehen →"
+      />
 
       {
         featuredEvents.length > 0 ? (
@@ -302,10 +269,12 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 
   <section class="border-y border-ink/8 bg-paper-muted py-20">
     <Container>
-      <div class="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
-        <SectionHeading eyebrow="Aktuelles" heading="Neuigkeiten aus der Gemeinde" />
-        <CtaButton href="/neuigkeiten" variant="ghost">Alle Neuigkeiten ansehen →</CtaButton>
-      </div>
+      <SectionHeaderRow
+        eyebrow="Aktuelles"
+        heading="Neuigkeiten aus der Gemeinde"
+        linkHref="/neuigkeiten"
+        linkLabel="Alle Neuigkeiten ansehen →"
+      />
 
       {
         featuredNews.length > 0 ? (
@@ -325,17 +294,13 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
     recurringEvents.length > 0 && (
       <section class="py-20">
         <Container>
-          <SectionHeading
+          <SectionHeaderRow
             eyebrow="Jede Woche"
             heading="Regelmäßige Veranstaltungen"
             text="Angebote, die regelmäßig stattfinden – für Kinder, Jugendliche und Erwachsene."
-            align="center"
-            class="mx-auto"
           />
-          <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {recurringEvents.slice(0, 4).map((item) => (
-              <RecurringEventCard event={item} />
-            ))}
+          <div class="mt-10">
+            <RecurringEventsSlider events={recurringEvents} />
           </div>
           <div class="mt-10 text-center">
             <CtaButton href="/veranstaltungen" variant="secondary">Alle regelmäßigen Veranstaltungen</CtaButton>
@@ -346,51 +311,9 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
   }
 
   {
-    aboutVisible && (
-      <section class="border-t border-ink/8 bg-paper-muted">
-        <Container class="flex flex-col md:min-h-[560px] md:flex-row md:items-stretch">
-          {/* Bildbereich: ca. 57% Breite (Tablet ca. 55%), kein vollflächiges Hintergrundbild. */}
-          <div class="relative aspect-[4/3] w-full overflow-hidden md:aspect-auto md:w-[55%] lg:w-[57%]">
-            {homePage?.aboutImage?.asset ? (
-              <img
-                src={aboutMediaImageUrl!}
-                srcset={aboutMediaSrcset}
-                sizes="(min-width: 768px) 57vw, 100vw"
-                alt={homePage?.aboutImageAlt ?? ''}
-                class="absolute inset-0 h-full w-full object-cover"
-                style={`object-position: ${aboutMediaPositionStyle};`}
-                loading="lazy"
-              />
-            ) : (
-              <PlaceholderImage class="absolute inset-0 h-full w-full" label={aboutHeadline} />
-            )}
-            {/* weicher, breiterer Übergang zum neutralen Textbereich, nur wo der Bereich geteilt ist */}
-            <div
-              class="absolute inset-y-0 right-0 hidden md:block md:w-[120px] lg:w-[160px]"
-              style={`background: ${aboutMediaFadeGradient};`}
-            />
-          </div>
-
-          {/* Textbereich: ca. 43% Breite, ruhige Papierfläche, mehr Abstand zum Bild und zum Rand */}
-          <div class="flex w-full items-center bg-paper px-6 py-12 sm:px-8 md:w-[45%] md:px-12 md:py-16 lg:w-[43%] lg:px-16">
-            <div class="w-full max-w-[480px]">
-              <SectionHeading eyebrow={aboutEyebrow} heading={aboutHeadline} text={aboutText} />
-              {showAboutButton && (
-                <div class="mt-8">
-                  <CtaButton href={homePage!.aboutButtonLink!}>{homePage!.aboutButtonText}</CtaButton>
-                </div>
-              )}
-            </div>
-          </div>
-        </Container>
-      </section>
-    )
-  }
-
-  {
     showLivestream && (
       <section class="bg-anchor-900 py-20 text-paper">
-        <Container class="flex flex-col items-center gap-6 text-center">
+        <Container class="flex flex-col items-start gap-6">
           <span class="flex h-12 w-12 items-center justify-center rounded-full bg-anchor-800 ring-1 ring-anchor-700">
             <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-paper" aria-hidden="true">
               <path d="M5 7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.5" />
@@ -401,7 +324,6 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
             eyebrow={homePage?.livestreamEyebrow}
             heading={homePage?.livestreamHeadline || 'Gottesdienst per Livestream verfolgen'}
             text={homePage?.livestreamText}
-            align="center"
             class="text-paper [&_p]:text-anchor-100 [&_h2]:text-paper"
           />
           <CtaButton href={livestreamLinkUrl!} variant="inverse">{homePage?.livestreamButtonText || 'Zum Livestream'}</CtaButton>

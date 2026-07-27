@@ -1,0 +1,27 @@
+---
+import SectionHeading from './SectionHeading.astro';
+import CtaButton from './CtaButton.astro';
+
+interface Props {
+  eyebrow?: string;
+  heading: string;
+  text?: string;
+  linkHref?: string;
+  linkLabel?: string;
+  class?: string;
+}
+
+const { eyebrow, heading, text, linkHref, linkLabel, class: className = '' } = Astro.props;
+const showLink = Boolean(linkHref && linkLabel);
+---
+
+<div class:list={['flex flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between', className]}>
+  <SectionHeading eyebrow={eyebrow} heading={heading} text={text} />
+  {
+    showLink && (
+      <CtaButton href={linkHref!} variant="ghost" class="shrink-0">
+        {linkLabel}
+      </CtaButton>
+    )
+  }
+</div>

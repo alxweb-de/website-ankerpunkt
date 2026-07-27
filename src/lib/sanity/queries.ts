@@ -181,16 +181,6 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     "secondaryButton": secondaryButton${ctaFragment},
     "featuredNews": featuredNews[]->${newsSummaryFragment},
     "featuredEvents": featuredEvents[]->${eventSummaryFragment},
-    aboutSectionVisible,
-    aboutEyebrow,
-    aboutHeadline,
-    aboutText,
-    "aboutImage": aboutImage${imageFragment},
-    aboutImageAlt,
-    aboutImagePosition,
-    aboutImageCaption,
-    aboutButtonText,
-    aboutButtonLink,
     livestreamVisible,
     livestreamEyebrow,
     livestreamHeadline,
@@ -319,4 +309,20 @@ export const RECURRING_EVENT_SLUGS_QUERY = defineQuery(/* groq */ `
 
 export const ACTIVE_PEOPLE_QUERY = defineQuery(/* groq */ `
   *[_type == "person" && isActive == true] | order(order asc)${personFragment}
+`);
+
+export const ABOUT_PAGE_QUERY = defineQuery(/* groq */ `
+  *[_type == "aboutPage"][0]{
+    eyebrow,
+    heading,
+    "groupPhoto": groupPhoto${imageFragment},
+    intro[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    buttonText,
+    buttonLink,
+    peopleHeading,
+    "people": people[]->${personFragment}
+  }
 `);

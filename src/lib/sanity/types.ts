@@ -210,7 +210,6 @@ export interface HeroInfoItem {
 export type HeroBackgroundPosition = 'center center' | 'center top' | 'center bottom' | 'left center' | 'right center';
 export type HeroTextWidth = 'narrow' | 'normal' | 'wide';
 export type HeroBottomFadeStrength = 'subtle' | 'medium' | 'strong';
-export type AboutImagePosition = HeroBackgroundPosition;
 export type LivestreamPlatform = 'youtube' | 'vimeo' | 'other';
 
 export interface HomePage {
@@ -229,16 +228,6 @@ export interface HomePage {
   secondaryButton?: CtaLink;
   featuredNews?: NewsSummary[];
   featuredEvents?: EventSummary[];
-  aboutSectionVisible?: boolean;
-  aboutEyebrow?: string;
-  aboutHeadline?: string;
-  aboutText?: string;
-  aboutImage?: SanityImageData;
-  aboutImageAlt?: string;
-  aboutImagePosition?: AboutImagePosition;
-  aboutImageCaption?: string;
-  aboutButtonText?: string;
-  aboutButtonLink?: string;
   livestreamVisible?: boolean;
   livestreamEyebrow?: string;
   livestreamHeadline?: string;
@@ -247,6 +236,17 @@ export interface HomePage {
   livestreamButtonText?: string;
   livestreamEmbedUrl?: string;
   livestreamPlatform?: LivestreamPlatform;
+}
+
+export interface AboutPage {
+  eyebrow?: string;
+  heading?: string;
+  groupPhoto?: SanityImageData;
+  intro?: PortableTextValue;
+  buttonText?: string;
+  buttonLink?: string;
+  peopleHeading?: string;
+  people?: PersonSummary[];
 }
 
 export interface Settings {

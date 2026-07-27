@@ -1,0 +1,238 @@
+---
+import RecurringEventCard from './RecurringEventCard.astro';
+import type { RecurringEventSummary } from '../lib/sanity/types';
+
+interface Props {
+  events: RecurringEventSummary[];
+}
+
+const { events } = Astro.props;
+
+// Only turn on looping/arrows/autoplay once there are more cards than the largest
+// simultaneously visible count (4, on desktop). With fewer, everything already fits
+// or the native scroll-snap track alone is enough to swipe through on small screens.
+const enhanced = events.length > 4;
+
+// Full duplicate on each side keeps the illusion seamless in both directions no matter
+// how many real cards there are. These clones are visual filler only: `inert` removes
+// them from the accessibility tree, tab order and pointer events, so screen readers and
+// keyboard users only ever encounter each event once.
+const trackItems = enhanced
+  ? [
+      ...events.map((event, i) => ({ event, key: `before-${i}`, real: false })),
+      ...events.map((event, i) => ({ event, key: `real-${i}`, real: true })),
+      ...events.map((event, i) => ({ event, key: `after-${i}`, real: false })),
+    ]
+  : events.map((event, i) => ({ event, key: `real-${i}`, real: true }));
+---
+
+<div
+  class="relative"
+  data-recurring-slider
+  data-enhanced={enhanced ? 'true' : 'false'}
+  data-real-count={events.length}
+  data-autoplay-ms="4500"
+>
+  <div class="-mx-6 overflow-hidden px-6 sm:mx-0 sm:px-0">
+    <ul
+      class="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth py-2 [-ms-overflow-style:none] [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-anchor-600 [&::-webkit-scrollbar]:hidden"
+      data-track
+      tabindex="0"
+      aria-roledescription="Karussell"
+    >
+      {
+        trackItems.map(({ event, key, real }) => (
+          <li
+            class="shrink-0 snap-start [flex:0_0_86%] sm:[flex:0_0_calc(50%_-_0.75rem)] md:[flex:0_0_calc(33.333%_-_1rem)] lg:[flex:0_0_calc(25%_-_1.125rem)]"
+            data-key={key}
+            aria-hidden={real ? undefined : 'true'}
+            inert={real ? undefined : true}
+          >
+            <RecurringEventCard event={event} class="h-full" />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  {
+    enhanced && (
+      <>
+        <button
+          type="button"
+          data-prev
+          aria-label="Vorherige regelmäßige Veranstaltungen anzeigen"
+          class="absolute top-1/2 left-0 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-paper/95 text-anchor-700 shadow-md ring-1 ring-anchor-100 transition-colors duration-200 hover:bg-anchor-50 hover:text-anchor-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-600 sm:flex"
+        >
+          <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+            <path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          data-next
+          aria-label="Nächste regelmäßige Veranstaltungen anzeigen"
+          class="absolute top-1/2 right-0 hidden h-10 w-10 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-paper/95 text-anchor-700 shadow-md ring-1 ring-anchor-100 transition-colors duration-200 hover:bg-anchor-50 hover:text-anchor-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-600 sm:flex"
+        >
+          <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+            <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </>
+    )
+  }
+</div>
+
+<script>
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function initSlider(root: HTMLElement) {
+    if (root.dataset.enhanced !== 'true') return;
+
+    const track = root.querySelector<HTMLUListElement>('[data-track]');
+    const prevBtn = root.querySelector<HTMLButtonElement>('[data-prev]');
+    const nextBtn = root.querySelector<HTMLButtonElement>('[data-next]');
+    const realCount = Number(root.dataset.realCount || '0');
+    const autoplayMs = Number(root.dataset.autoplayMs || '4500');
+
+    if (!track || !prevBtn || !nextBtn || realCount === 0) return;
+
+    const slides = Array.from(track.children) as HTMLElement[];
+    const total = slides.length;
+
+    if (total !== realCount * 3) return;
+
+    // Index into the tripled [before][real][after] array. Starts at the first real slide.
+    let currentIndex = realCount;
+    let hoverPaused = false;
+    let pausedUntil = 0;
+    let settleTimeout: number | undefined;
+    let resizeTimeout: number | undefined;
+    let timer: number | undefined;
+
+    // Left edge of a given slide, expressed in the track's own scrollLeft coordinate space.
+    // Reading this live from actual layout (instead of a cached card-width + gap estimate)
+    // means there is nothing to drift out of sync, on any breakpoint, ever.
+    function slidePosition(index: number) {
+      const trackRect = track!.getBoundingClientRect();
+      const slideRect = slides[index].getBoundingClientRect();
+      return slideRect.left - trackRect.left + track!.scrollLeft;
+    }
+
+    function closestIndex() {
+      let bestIndex = currentIndex;
+      let bestDistance = Infinity;
+      for (let i = 0; i < total; i += 1) {
+        const distance = Math.abs(slidePosition(i) - track!.scrollLeft);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
+    }
+
+    function goTo(index: number, behavior: ScrollBehavior) {
+      track!.scrollTo({ left: slidePosition(index), behavior });
+    }
+
+    // Once a scroll (autoplay, arrow click or manual swipe) has fully settled, check whether
+    // we've landed on a cloned slide. A clone is pixel-identical to the real slide it stands
+    // in for, so re-anchoring onto the real one — instantly, no animation — is invisible to
+    // the user while keeping the index inside the real range for the next step.
+    function settle() {
+      const idx = closestIndex();
+      if (idx >= realCount * 2) {
+        currentIndex = idx - realCount;
+        goTo(currentIndex, 'instant');
+      } else if (idx < realCount) {
+        currentIndex = idx + realCount;
+        goTo(currentIndex, 'instant');
+      } else {
+        currentIndex = idx;
+      }
+    }
+
+    function advance(direction: number) {
+      currentIndex += direction;
+      goTo(currentIndex, 'smooth');
+    }
+
+    function pauseAfterInteraction() {
+      pausedUntil = Date.now() + 4000;
+    }
+
+    track.addEventListener('scroll', () => {
+      window.clearTimeout(settleTimeout);
+      settleTimeout = window.setTimeout(settle, 120);
+    });
+
+    track.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        advance(1);
+        pauseAfterInteraction();
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        advance(-1);
+        pauseAfterInteraction();
+      }
+    });
+
+    track.addEventListener('pointerdown', pauseAfterInteraction, { passive: true });
+
+    prevBtn.addEventListener('click', () => {
+      advance(-1);
+      pauseAfterInteraction();
+    });
+    nextBtn.addEventListener('click', () => {
+      advance(1);
+      pauseAfterInteraction();
+    });
+
+    root.addEventListener('mouseenter', () => {
+      hoverPaused = true;
+    });
+    root.addEventListener('mouseleave', () => {
+      hoverPaused = false;
+    });
+
+    function tick() {
+      if (hoverPaused || Date.now() < pausedUntil) return;
+      advance(1);
+    }
+
+    function startAutoplay() {
+      if (timer || reducedMotionQuery.matches) return;
+      timer = window.setInterval(tick, autoplayMs);
+    }
+
+    function stopAutoplay() {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = undefined;
+      }
+    }
+
+    reducedMotionQuery.addEventListener('change', (event) => {
+      if (event.matches) stopAutoplay();
+      else startAutoplay();
+    });
+
+    // A resize can change the flex-basis width (breakpoint change) or just reflow existing
+    // widths. Either way, re-anchoring to the same index by live geometry keeps it exact —
+    // there is no cached measurement that could go stale.
+    window.addEventListener('resize', () => {
+      window.clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(() => {
+        goTo(currentIndex, 'instant');
+      }, 150);
+    });
+
+    goTo(currentIndex, 'instant');
+    window.addEventListener('load', () => goTo(currentIndex, 'instant'));
+    startAutoplay();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-recurring-slider]').forEach(initSlider);
+</script>

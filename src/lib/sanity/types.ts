@@ -266,6 +266,7 @@ export interface Settings {
   visitButton?: CtaLink;
   socialLinks?: SocialLink[];
   livestreamUrl?: string;
+  footerLogo?: SanityImageData;
   footerText?: string;
   legalEntityName?: string;
   legalRepresentative?: string;

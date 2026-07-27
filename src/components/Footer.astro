@@ -1,6 +1,7 @@
 ---
 import Container from './Container.astro';
 import { SOCIAL_PLATFORM_LABELS } from '../lib/format';
+import { urlFor } from '../lib/sanity/image';
 import type { Settings } from '../lib/sanity/types';
 
 interface Props {
@@ -11,6 +12,13 @@ const { settings } = Astro.props;
 
 const churchName = settings?.churchName ?? 'Ankerpunkt';
 const year = new Date().getFullYear();
+
+// Footer logo falls back to the global header logo, then to the church name as plain text.
+// Build the URL from the asset alone (not the full image value) so no crop/hotspot metadata
+// can ever be applied to the logo.
+const footerLogoImage = settings?.footerLogo?.asset ? settings.footerLogo : settings?.logo;
+const footerLogoUrl = footerLogoImage?.asset ? urlFor(footerLogoImage.asset).height(160).fit('max').url() : null;
+const footerLogoAlt = footerLogoImage?.alt || churchName;
 
 const legalLinks = [
   { label: 'Impressum', href: settings?.imprintUrl ?? '/impressum' },
@@ -28,7 +36,13 @@ const exploreLinks = [
 <footer class="border-t border-anchor-100 bg-anchor-900 text-anchor-100">
   <Container class="grid grid-cols-1 gap-12 py-16 sm:grid-cols-2 lg:grid-cols-4">
     <div>
-      <p class="font-display text-xl font-medium text-paper">{churchName}</p>
+      {
+        footerLogoUrl ? (
+          <img src={footerLogoUrl} alt={footerLogoAlt} class="h-11 w-auto object-contain sm:h-14" />
+        ) : (
+          <p class="font-display text-xl font-medium text-paper">{churchName}</p>
+        )
+      }
       {settings?.address && (
         <address class="mt-4 not-italic text-sm leading-relaxed text-anchor-200">
           {settings.address.street}<br />

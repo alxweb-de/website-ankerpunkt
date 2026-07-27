@@ -141,6 +141,7 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     "visitButton": visitButton${ctaFragment},
     socialLinks,
     livestreamUrl,
+    "footerLogo": footerLogo${logoImageFragment},
     footerText,
     legalEntityName,
     legalRepresentative,

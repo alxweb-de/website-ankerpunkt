@@ -6,9 +6,10 @@ import type { Settings } from '../lib/sanity/types';
 
 interface Props {
   settings: Settings | null;
+  transparent?: boolean;
 }
 
-const { settings } = Astro.props;
+const { settings, transparent = false } = Astro.props;
 
 const navItems = [
   { label: 'Startseite', href: '/' },
@@ -30,12 +31,25 @@ const churchName = settings?.churchName ?? 'Ankerpunkt';
 const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).fit('max').url() : null;
 ---
 
-<header class="sticky top-0 z-40 border-b border-ink/8 bg-paper/95 backdrop-blur-md">
+<header
+  id="site-header"
+  data-transparent={transparent ? 'true' : 'false'}
+  class:list={[
+    'top-0 z-40',
+    transparent
+      ? 'fixed inset-x-0 border-b border-transparent bg-paper/30 backdrop-blur-[10px] transition-[background-color,backdrop-filter,border-color] duration-[250ms] ease-out'
+      : 'sticky border-b border-ink/8 bg-paper/95 backdrop-blur-md',
+  ]}
+>
   <Container class="flex h-18 items-center justify-between sm:h-20">
     <a href="/" class="flex items-center">
       {
         logoUrl ? (
-          <img src={logoUrl} alt={churchName} class="h-11 w-auto object-contain sm:h-14" />
+          <img
+            src={logoUrl}
+            alt={churchName}
+            class:list={['h-11 w-auto object-contain sm:h-14', transparent && 'drop-shadow-[0_1px_3px_rgba(28,31,30,0.18)]']}
+          />
         ) : (
           <span class="flex flex-col leading-none">
             <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
@@ -129,4 +143,31 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
     iconOpen?.classList.toggle('hidden');
     iconClose?.classList.toggle('hidden');
   });
+
+  const header = document.getElementById('site-header');
+  if (header?.dataset.transparent === 'true') {
+    const TOP_CLASSES = ['bg-paper/30', 'backdrop-blur-[10px]', 'border-transparent'];
+    const SCROLLED_CLASSES = ['bg-paper/95', 'backdrop-blur-md', 'border-ink/8'];
+    const SCROLL_THRESHOLD = 24;
+
+    const setScrolled = (scrolled: boolean) => {
+      header.classList.remove(...(scrolled ? TOP_CLASSES : SCROLLED_CLASSES));
+      header.classList.add(...(scrolled ? SCROLLED_CLASSES : TOP_CLASSES));
+    };
+
+    let isScrolled = window.scrollY > SCROLL_THRESHOLD;
+    setScrolled(isScrolled);
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        const next = window.scrollY > SCROLL_THRESHOLD;
+        if (next !== isScrolled) {
+          isScrolled = next;
+          setScrolled(isScrolled);
+        }
+      },
+      { passive: true },
+    );
+  }
 </script>

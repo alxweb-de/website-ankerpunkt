@@ -116,7 +116,7 @@ const heroInfoItems = homePage?.heroInfoItems ?? [];
 const visitAddress = settings?.visitAddress ?? settings?.address;
 ---
 
-<BaseLayout title="Willkommen">
+<BaseLayout title="Willkommen" transparentHeader={hasHeroBackground}>
   <section
     class:list={[
       'relative overflow-hidden',
@@ -167,7 +167,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
       class:list={[
         'relative z-10',
         hasHeroBackground
-          ? 'py-20 lg:py-28'
+          ? 'pt-28 pb-20 sm:pt-32 lg:pt-36 lg:pb-28'
           : 'grid grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24',
       ]}
     >

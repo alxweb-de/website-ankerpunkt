@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Container from '../components/Container.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import PortableTextContent from '../components/PortableTextContent.astro';
+import PlaceholderImage from '../components/PlaceholderImage.astro';
+import CtaButton from '../components/CtaButton.astro';
+import { urlFor } from '../lib/sanity/image';
+import { getTopicPage } from '../lib/sanity/api';
+
+const page = await getTopicPage('topicPage-glauben');
+
+const heading = page?.heading || 'Glauben entdecken';
+const intro =
+  page?.intro ||
+  'Wer ist Jesus, und was hat er mit meinem Leben zu tun? Bei uns darfst du Fragen stellen, Antworten suchen und deinen eigenen Weg im Glauben finden.';
+const primaryButton = page?.primaryButton || { label: 'Mehr über uns erfahren', url: '/ueber-uns' };
+const secondaryButton = page?.secondaryButton || { label: 'Zum Gottesdienst', url: '/veranstaltungen' };
+const highlights = page?.highlights ?? [];
+
+const hasImage = Boolean(page?.image?.asset);
+const imageUrl = hasImage ? urlFor(page!.image!).width(1600).quality(85).auto('format').url() : null;
+---
+
+<BaseLayout
+  title="Glauben entdecken"
+  description="Glauben entdecken bei Ankerpunkt: Fragen stellen, Antworten suchen, Jesus kennenlernen."
+>
+  <section class="py-16 sm:py-20">
+    <Container>
+      <div class="overflow-hidden rounded-3xl">
+        {
+          imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={page?.image?.alt ?? ''}
+              class="h-auto w-full object-cover"
+              loading="eager"
+            />
+          ) : (
+            <PlaceholderImage class="aspect-[16/9] w-full" label="Glauben entdecken bei Ankerpunkt" />
+          )
+        }
+      </div>
+
+      <div class="mx-auto mt-12 max-w-2xl text-center">
+        <SectionHeading eyebrow={page?.eyebrow || 'Glauben entdecken'} heading={heading} align="center" class="mx-auto" />
+        <p class="mt-6 text-pretty text-lg leading-relaxed text-ink-soft">{intro}</p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+          <CtaButton href={primaryButton.url}>{primaryButton.label}</CtaButton>
+          {secondaryButton && (
+            <CtaButton href={secondaryButton.url} variant="secondary">{secondaryButton.label}</CtaButton>
+          )}
+        </div>
+      </div>
+
+      {page?.body && <PortableTextContent value={page.body} class="mx-auto mt-16 max-w-2xl" />}
+    </Container>
+  </section>
+
+  {
+    highlights.length > 0 && (
+      <section class="bg-paper-muted py-16 sm:py-20">
+        <Container>
+          <SectionHeading eyebrow="Erste Schritte" heading="So kannst du Glauben entdecken" align="center" class="mx-auto" />
+          <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {highlights.map((item) => (
+              <div class="rounded-2xl bg-white p-6 ring-1 ring-anchor-100">
+                <h3 class="font-display text-lg font-medium text-ink">{item.title}</h3>
+                {item.text && <p class="mt-2 text-sm leading-relaxed text-ink-soft">{item.text}</p>}
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+    )
+  }
+</BaseLayout>

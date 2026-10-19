@@ -17,7 +17,8 @@ const settings = await getSettings();
 const siteName = settings?.churchName ?? 'Ankerpunkt';
 const pageTitle = title ? `${title} · ${siteName}` : siteName;
 const pageDescription =
-  description ?? 'Ankerpunkt ist eine lebendige Gemeinde in Rengsdorf mit offenen Türen für Familien, Jugendliche und Erwachsene.';
+  description ??
+  'EF-Horhausen (Evangelische Freikirche Horhausen) ist eine lebendige Kirchengemeinde in Horhausen mit offenen Türen für Familien, Jugendliche und Erwachsene.';
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin);
 ---

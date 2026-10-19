@@ -25,6 +25,14 @@ const personFragment = /* groq */ `{
 
 const ctaFragment = /* groq */ `{ label, url }`;
 
+const fileFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    mimeType
+  }
+}`;
+
 const seoFragment = /* groq */ `{ title, description }`;
 
 const newsCategoryFragment = /* groq */ `{ _id, title, slug }`;
@@ -128,6 +136,8 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     churchName,
     tagline,
     "logo": logo${logoImageFragment},
+    "logoLight": logoLight${logoImageFragment},
+    "logoDark": logoDark${logoImageFragment},
     address,
     phone,
     email,
@@ -161,13 +171,29 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
   }
 `);
 
+const coreTopicFragment = /* groq */ `{
+  _key,
+  title,
+  text,
+  "image": image${imageFragment},
+  icon,
+  link
+}`;
+
 export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
   *[_type == "homePage"][0]{
+    heroIdentityName,
+    heroIdentityTagline,
     heroEyebrow,
     heroHeading,
+    heroBibleReference,
     heroText,
+    heroBackgroundType,
     "heroBackgroundImage": heroBackgroundImage${imageFragment},
     heroBackgroundAlt,
+    "heroBackgroundVideo": heroBackgroundVideo${fileFragment},
+    "heroVideoPoster": heroVideoPoster${imageFragment},
+    heroVideoDisableOnMobile,
     heroBackgroundPosition,
     heroBackgroundOverlay,
     heroTextWidth,
@@ -180,6 +206,8 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     },
     "primaryButton": primaryButton${ctaFragment},
     "secondaryButton": secondaryButton${ctaFragment},
+    coreTopicsHeading,
+    "coreTopics": coreTopics[]${coreTopicFragment},
     "featuredNews": featuredNews[]->${newsSummaryFragment},
     "featuredEvents": featuredEvents[]->${eventSummaryFragment},
     livestreamVisible,
@@ -310,6 +338,26 @@ export const RECURRING_EVENT_SLUGS_QUERY = defineQuery(/* groq */ `
 
 export const ACTIVE_PEOPLE_QUERY = defineQuery(/* groq */ `
   *[_type == "person" && isActive == true] | order(order asc)${personFragment}
+`);
+
+export const TOPIC_PAGE_QUERY = defineQuery(/* groq */ `
+  *[_type == "topicPage" && _id == $id][0]{
+    eyebrow,
+    heading,
+    intro,
+    "image": image${imageFragment},
+    body[]{
+      ...,
+      _type == "image" => ${imageFragment}
+    },
+    highlights[]{
+      _key,
+      title,
+      text
+    },
+    "primaryButton": primaryButton${ctaFragment},
+    "secondaryButton": secondaryButton${ctaFragment}
+  }
 `);
 
 export const ABOUT_PAGE_QUERY = defineQuery(/* groq */ `

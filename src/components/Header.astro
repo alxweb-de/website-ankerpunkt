@@ -1,6 +1,5 @@
 ---
 import Container from './Container.astro';
-import CtaButton from './CtaButton.astro';
 import { urlFor } from '../lib/sanity/image';
 import type { Settings } from '../lib/sanity/types';
 
@@ -12,11 +11,12 @@ interface Props {
 const { settings, transparent = false } = Astro.props;
 
 const navItems = [
-  { label: 'Startseite', href: '/' },
-  { label: 'Neuigkeiten', href: '/neuigkeiten' },
-  { label: 'Veranstaltungen', href: '/veranstaltungen' },
-  { label: 'Gruppen', href: '/gruppen' },
+  { label: 'Willkommen', href: '/' },
+  { label: 'Gemeinschaft erleben', href: '/gemeinschaft-erleben' },
+  { label: 'Glauben entdecken', href: '/glauben-entdecken' },
+  { label: 'Unterstützung erleben', href: '/unterstuetzung-erleben' },
   { label: 'Über uns', href: '/ueber-uns' },
+  { label: 'Kontakt', href: '/kontakt' },
 ];
 
 const currentPath = Astro.url.pathname;
@@ -28,41 +28,95 @@ function isActive(href: string) {
 
 const churchName = settings?.churchName ?? 'Ankerpunkt';
 // Build the URL from the asset alone (not the full image value) so no crop/hotspot metadata can ever be applied to the logo.
-const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).fit('max').url() : null;
+// Jede Variante fällt auf das allgemeine Logo zurück, wenn sie nicht separat gepflegt ist.
+const lightLogoImage = settings?.logoLight?.asset ? settings.logoLight : settings?.logo;
+const darkLogoImage = settings?.logoDark?.asset ? settings.logoDark : settings?.logo;
+const lightLogoUrl = lightLogoImage?.asset ? urlFor(lightLogoImage.asset).height(160).fit('max').url() : null;
+const darkLogoUrl = darkLogoImage?.asset ? urlFor(darkLogoImage.asset).height(160).fit('max').url() : null;
+
+// Der Crossfade lohnt sich nur, wenn beide Varianten existieren und sich tatsächlich unterscheiden
+// (z. B. wenn im CMS noch keine helle Variante gepflegt ist, fallen beide auf dasselbe Logo zurück).
+const needsLogoCrossfade = Boolean(transparent && lightLogoUrl && darkLogoUrl && lightLogoUrl !== darkLogoUrl);
+// Oben im transparenten Zustand bevorzugt hell; auf eingefärbten Headern (Unterseiten oder
+// nach dem Scrollen, falls kein Crossfade läuft) bevorzugt dunkel.
+const singleLogoUrl = transparent ? (lightLogoUrl ?? darkLogoUrl) : (darkLogoUrl ?? lightLogoUrl);
+
+// Feste Logo-Box-Breite aus dem Seitenverhältnis des hinterlegten Logos, damit ein Wechsel zwischen
+// heller und dunkler Variante nie die Breite des Logobereichs (und damit die Navigation) verschiebt.
+const logoDims = darkLogoImage?.asset?.metadata?.dimensions ?? lightLogoImage?.asset?.metadata?.dimensions;
+const logoAspectRatio = logoDims && logoDims.height ? logoDims.width / logoDims.height : 3;
+const LOGO_BOX_HEIGHT_SM_PX = 56; // entspricht sm:h-14
+const logoBoxWidthPx = Math.ceil(logoAspectRatio * LOGO_BOX_HEIGHT_SM_PX) + 12;
 ---
 
 <header
   id="site-header"
   data-transparent={transparent ? 'true' : 'false'}
+  data-scrolled={transparent ? 'false' : 'true'}
   class:list={[
-    'top-0 z-40',
+    'group/header top-0 z-40',
     transparent
-      ? 'fixed inset-x-0 border-b border-transparent bg-paper/30 backdrop-blur-[10px] transition-[background-color,backdrop-filter,border-color] duration-[250ms] ease-out'
+      ? 'fixed inset-x-0 border-b border-transparent bg-transparent backdrop-blur-[2px] transition-[background-color,backdrop-filter,border-color] duration-[250ms] ease-out'
       : 'sticky border-b border-ink/8 bg-paper/95 backdrop-blur-md',
   ]}
 >
   <Container class="flex h-18 items-center justify-between sm:h-20">
     <a href="/" class="flex items-center">
       {
-        logoUrl ? (
+        needsLogoCrossfade ? (
+          // Beide Logos liegen übereinander in einer formatfesten Box (keine Layoutverschiebung)
+          // und blenden rein per CSS-Opacity um — exakt synchron mit dem bereits vorhandenen
+          // data-scrolled-Zustand des Headers, ganz ohne zusätzliches JavaScript.
+          <span class="relative block h-11 sm:h-14" style={`width: ${logoBoxWidthPx}px;`}>
+            <img
+              src={lightLogoUrl!}
+              alt={churchName}
+              class="absolute inset-0 h-full w-full object-contain object-left opacity-100 drop-shadow-[0_1px_3px_rgba(28,31,30,0.18)] transition-opacity duration-300 ease-out group-data-[scrolled=true]/header:opacity-0"
+            />
+            <img
+              src={darkLogoUrl!}
+              alt=""
+              aria-hidden="true"
+              class="absolute inset-0 h-full w-full object-contain object-left opacity-0 transition-opacity duration-300 ease-out group-data-[scrolled=true]/header:opacity-100"
+            />
+          </span>
+        ) : singleLogoUrl ? (
           <img
-            src={logoUrl}
+            src={singleLogoUrl}
             alt={churchName}
             class:list={['h-11 w-auto object-contain sm:h-14', transparent && 'drop-shadow-[0_1px_3px_rgba(28,31,30,0.18)]']}
           />
         ) : (
           <span class="flex flex-col leading-none">
-            <span class="font-display text-lg font-medium tracking-tight text-ink sm:text-xl">{churchName}</span>
+            <span
+              class:list={[
+                'font-display text-lg font-medium tracking-tight sm:text-xl',
+                transparent
+                  ? 'text-ink group-data-[scrolled=false]/header:text-paper'
+                  : 'text-ink',
+              ]}
+            >
+              {churchName}
+            </span>
             {settings?.tagline && (
-              <span class="mt-1 text-[10px] font-semibold tracking-[0.16em] text-anchor-600 uppercase">{settings.tagline}</span>
+              <span
+                class:list={[
+                  'mt-1 text-[10px] font-semibold tracking-[0.16em] uppercase',
+                  transparent
+                    ? 'text-anchor-600 group-data-[scrolled=false]/header:text-paper/80'
+                    : 'text-anchor-600',
+                ]}
+              >
+                {settings.tagline}
+              </span>
             )}
           </span>
         )
       }
     </a>
 
-    <nav aria-label="Hauptnavigation" class="hidden lg:block">
-      <ul class="flex items-center gap-7">
+    <nav aria-label="Hauptnavigation" class="hidden xl:block">
+      <ul class="flex items-center gap-6 xl:gap-8">
         {
           navItems.map((item) => (
             <li>
@@ -70,8 +124,16 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
                 href={item.href}
                 aria-current={isActive(item.href) ? 'page' : undefined}
                 class:list={[
-                  'relative py-2 text-[0.925rem] font-medium transition-colors duration-200 after:absolute after:right-0 after:-bottom-0.5 after:left-0 after:h-px after:scale-x-0 after:bg-anchor-700 after:transition-transform after:duration-200 hover:text-anchor-900 hover:after:scale-x-100',
-                  isActive(item.href) ? 'text-anchor-900 after:scale-x-100' : 'text-ink-soft',
+                  'relative py-2 text-[0.925rem] font-medium transition-colors duration-200 after:absolute after:right-0 after:-bottom-0.5 after:left-0 after:h-px after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100',
+                  transparent
+                    ? [
+                        'after:bg-anchor-700 hover:text-anchor-900',
+                        'group-data-[scrolled=false]/header:after:bg-paper group-data-[scrolled=false]/header:hover:text-paper',
+                        isActive(item.href)
+                          ? 'text-anchor-900 after:scale-x-100 group-data-[scrolled=false]/header:text-paper'
+                          : 'text-ink-soft group-data-[scrolled=false]/header:text-paper/85',
+                      ]
+                    : ['after:bg-anchor-700 hover:text-anchor-900', isActive(item.href) ? 'text-anchor-900 after:scale-x-100' : 'text-ink-soft'],
                 ]}
               >
                 {item.label}
@@ -82,14 +144,15 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
       </ul>
     </nav>
 
-    <div class="hidden lg:block">
-      <CtaButton href="/kontakt" size="sm">Kontakt</CtaButton>
-    </div>
-
     <button
       id="menu-toggle"
       type="button"
-      class="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-anchor-50 lg:hidden"
+      class:list={[
+        'flex h-10 w-10 items-center justify-center rounded-full xl:hidden',
+        transparent
+          ? 'text-ink hover:bg-anchor-50 group-data-[scrolled=false]/header:text-paper group-data-[scrolled=false]/header:hover:bg-paper/15'
+          : 'text-ink hover:bg-anchor-50',
+      ]}
       aria-expanded="false"
       aria-controls="mobile-menu"
     >
@@ -103,7 +166,7 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
     </button>
   </Container>
 
-  <nav id="mobile-menu" aria-label="Mobile Navigation" class="hidden border-t border-ink/8 bg-paper lg:hidden">
+  <nav id="mobile-menu" aria-label="Mobile Navigation" class="hidden border-t border-ink/8 bg-paper xl:hidden">
     <Container>
       <ul class="flex flex-col py-2">
         {
@@ -122,9 +185,6 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
             </li>
           ))
         }
-        <li class="px-4 pt-2 pb-3">
-          <CtaButton href="/kontakt" class="w-full">Kontakt</CtaButton>
-        </li>
       </ul>
     </Container>
   </nav>
@@ -146,28 +206,36 @@ const logoUrl = settings?.logo?.asset ? urlFor(settings.logo.asset).height(160).
 
   const header = document.getElementById('site-header');
   if (header?.dataset.transparent === 'true') {
-    const TOP_CLASSES = ['bg-paper/30', 'backdrop-blur-[10px]', 'border-transparent'];
+    const TOP_CLASSES = ['bg-transparent', 'backdrop-blur-[2px]', 'border-transparent'];
     const SCROLLED_CLASSES = ['bg-paper/95', 'backdrop-blur-md', 'border-ink/8'];
     const SCROLL_THRESHOLD = 24;
 
+    let isScrolled: boolean | undefined;
     const setScrolled = (scrolled: boolean) => {
+      if (scrolled === isScrolled) return;
+      isScrolled = scrolled;
       header.classList.remove(...(scrolled ? TOP_CLASSES : SCROLLED_CLASSES));
       header.classList.add(...(scrolled ? SCROLLED_CLASSES : TOP_CLASSES));
+      header.dataset.scrolled = String(scrolled);
     };
 
-    let isScrolled = window.scrollY > SCROLL_THRESHOLD;
-    setScrolled(isScrolled);
-
-    window.addEventListener(
-      'scroll',
-      () => {
-        const next = window.scrollY > SCROLL_THRESHOLD;
-        if (next !== isScrolled) {
-          isScrolled = next;
-          setScrolled(isScrolled);
-        }
-      },
-      { passive: true },
-    );
+    // Ein unsichtbarer Sentinel ganz oben im Hero (siehe index.astro) ersetzt einen
+    // fortlaufenden Scroll-Listener: der Browser benachrichtigt uns nur, wenn der
+    // Sentinel den Viewport verlässt bzw. wieder betritt — das ist günstiger als bei
+    // jedem Scroll-Event selbst nachzurechnen. Der Sentinel ist genau SCROLL_THRESHOLD
+    // hoch, direkt an der Seitenoberkante: Sobald er komplett aus dem Viewport gescrollt
+    // ist, meldet der Observer isIntersecting=false. Kein rootMargin nötig — die Höhe des
+    // Sentinels selbst ist die Schwelle.
+    const sentinel = document.getElementById('hero-scroll-sentinel');
+    if (sentinel && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting), {
+        threshold: 0,
+      });
+      observer.observe(sentinel);
+    } else {
+      // Fallback für Seiten ohne Sentinel oder sehr alte Browser ohne IntersectionObserver.
+      setScrolled(window.scrollY > SCROLL_THRESHOLD);
+      window.addEventListener('scroll', () => setScrolled(window.scrollY > SCROLL_THRESHOLD), { passive: true });
+    }
   }
 </script>

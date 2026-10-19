@@ -34,6 +34,7 @@
   --color-sand-900: #423020;
 
   --animate-fade-up: fade-up 0.7s ease-out both;
+  --animate-hero-chevron: hero-chevron 2.8s ease-in-out infinite;
 
   @keyframes fade-up {
     from {
@@ -43,6 +44,18 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Kombiniert mit der horizontalen -translate-x-1/2-Zentrierung des Elements — beide Transforms
+     müssen in jedem Keyframe zusammen stehen, sonst würde die Animation die Zentrierung überschreiben. */
+  @keyframes hero-chevron {
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    50% {
+      transform: translateX(-50%) translateY(6px);
     }
   }
 }
@@ -77,6 +90,14 @@
   .bg-dot-grid {
     background-image: radial-gradient(var(--color-anchor-300) 1px, transparent 1px);
     background-size: 24px 24px;
+  }
+
+  /* Fullscreen-Hero: 100vh als breit unterstützte Basis, 100svh überschreibt sie dort, wo der
+     Browser es kennt (reagiert auf ein- und ausblendende mobile Adressleisten, ohne Inhalte
+     abzuschneiden — min-height statt height lässt die Box bei Bedarf trotzdem mitwachsen). */
+  .min-h-hero {
+    min-height: 100vh;
+    min-height: 100svh;
   }
 
   .card-shell {

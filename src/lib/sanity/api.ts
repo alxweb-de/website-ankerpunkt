@@ -15,6 +15,7 @@ import {
   RECURRING_EVENT_SLUGS_QUERY,
   RECURRING_EVENTS_QUERY,
   SETTINGS_QUERY,
+  TOPIC_PAGE_QUERY,
   UPCOMING_EVENTS_LIMIT_QUERY,
   UPCOMING_EVENTS_QUERY,
 } from './queries';
@@ -31,6 +32,7 @@ import type {
   RecurringEventDetail,
   RecurringEventSummary,
   Settings,
+  TopicPage,
 } from './types';
 
 export async function getSettings() {
@@ -43,6 +45,10 @@ export async function getHomePage() {
 
 export async function getAboutPage() {
   return sanityClient.fetch<AboutPage | null>(ABOUT_PAGE_QUERY);
+}
+
+export async function getTopicPage(id: string) {
+  return sanityClient.fetch<TopicPage | null>(TOPIC_PAGE_QUERY, { id });
 }
 
 export async function getUpcomingEvents() {

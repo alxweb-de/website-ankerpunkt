@@ -2,7 +2,7 @@
 interface Props {
   href: string;
   variant?: 'primary' | 'secondary' | 'ghost' | 'inverse';
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   class?: string;
 }
 
@@ -16,19 +16,24 @@ const variants = {
   secondary:
     'bg-paper text-anchor-900 ring-1 ring-inset ring-anchor-200 hover:bg-anchor-50 focus-visible:outline-anchor-800',
   ghost: 'text-anchor-800 hover:text-anchor-600 focus-visible:outline-anchor-800',
-  inverse: 'bg-paper text-anchor-900 hover:bg-anchor-50 focus-visible:outline-paper',
+  // Dezenter Glassmorphism-Button für helle Schrift über Fotos/Videos: ein dunkler (statt heller
+  // „milchiger“) Grundton hält den Kontrast auch in hellen Videoszenen zuverlässig, während Rand und
+  // Schrift hell bleiben. Aktuell ausschließlich vom Hero-CTA verwendet.
+  inverse:
+    'bg-ink/20 text-paper ring-1 ring-inset ring-paper/40 backdrop-blur-md hover:bg-ink/30 hover:ring-paper/60 focus-visible:outline-paper',
 };
 
 const sizes = {
   sm: 'px-4 py-2 text-sm',
   md: 'px-6 py-3 text-sm',
+  lg: 'px-8 py-4 text-base',
 };
 ---
 
 <a
   href={href}
   class:list={[
-    'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+    'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-[color,background-color,box-shadow] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
     variants[variant],
     sizes[size],
     className,

@@ -20,6 +20,14 @@ export interface SanityImageData {
   crop?: { top: number; bottom: number; left: number; right: number };
 }
 
+export interface SanityFileData {
+  asset?: {
+    _id: string;
+    url: string;
+    mimeType?: string;
+  };
+}
+
 export interface CtaLink {
   label: string;
   url: string;
@@ -208,16 +216,34 @@ export interface HeroInfoItem {
 }
 
 export type HeroBackgroundPosition = 'center center' | 'center top' | 'center bottom' | 'left center' | 'right center';
+export type HeroBackgroundType = 'image' | 'video';
 export type HeroTextWidth = 'narrow' | 'normal' | 'wide';
 export type HeroBottomFadeStrength = 'subtle' | 'medium' | 'strong';
 export type LivestreamPlatform = 'youtube' | 'vimeo' | 'other';
+export type CoreTopicIcon = 'community' | 'faith' | 'support' | 'none';
+
+export interface CoreTopic {
+  _key: string;
+  title: string;
+  text?: string;
+  image?: SanityImageData;
+  icon?: CoreTopicIcon;
+  link: string;
+}
 
 export interface HomePage {
+  heroIdentityName?: string;
+  heroIdentityTagline?: string;
   heroEyebrow?: string;
   heroHeading: string;
+  heroBibleReference?: string;
   heroText?: string;
+  heroBackgroundType?: HeroBackgroundType;
   heroBackgroundImage?: SanityImageData;
   heroBackgroundAlt?: string;
+  heroBackgroundVideo?: SanityFileData;
+  heroVideoPoster?: SanityImageData;
+  heroVideoDisableOnMobile?: boolean;
   heroBackgroundPosition?: HeroBackgroundPosition;
   heroBackgroundOverlay?: number;
   heroTextWidth?: HeroTextWidth;
@@ -226,6 +252,8 @@ export interface HomePage {
   heroInfoItems?: HeroInfoItem[];
   primaryButton?: CtaLink;
   secondaryButton?: CtaLink;
+  coreTopicsHeading?: string;
+  coreTopics?: CoreTopic[];
   featuredNews?: NewsSummary[];
   featuredEvents?: EventSummary[];
   livestreamVisible?: boolean;
@@ -236,6 +264,23 @@ export interface HomePage {
   livestreamButtonText?: string;
   livestreamEmbedUrl?: string;
   livestreamPlatform?: LivestreamPlatform;
+}
+
+export interface TopicPageHighlight {
+  _key: string;
+  title: string;
+  text?: string;
+}
+
+export interface TopicPage {
+  eyebrow?: string;
+  heading: string;
+  intro?: string;
+  image?: SanityImageData;
+  body?: PortableTextValue;
+  highlights?: TopicPageHighlight[];
+  primaryButton?: CtaLink;
+  secondaryButton?: CtaLink;
 }
 
 export interface AboutPage {
@@ -253,6 +298,8 @@ export interface Settings {
   churchName: string;
   tagline?: string;
   logo?: SanityImageData;
+  logoLight?: SanityImageData;
+  logoDark?: SanityImageData;
   address?: Address;
   phone?: string;
   email?: string;

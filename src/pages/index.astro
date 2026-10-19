@@ -4,36 +4,44 @@ import Container from '../components/Container.astro';
 import CtaButton from '../components/CtaButton.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import SectionHeaderRow from '../components/SectionHeaderRow.astro';
-import NewsCard from '../components/NewsCard.astro';
-import EventCard from '../components/EventCard.astro';
-import PlaceholderImage from '../components/PlaceholderImage.astro';
+import CoreTopicCard from '../components/CoreTopicCard.astro';
 import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
 import { urlFor } from '../lib/sanity/image';
-import { getHomePage, getNewsList, getRecurringEvents, getSettings, getUpcomingEventsLimited } from '../lib/sanity/api';
+import { getHomePage, getRecurringEvents, getSettings } from '../lib/sanity/api';
+import type { CoreTopic } from '../lib/sanity/types';
 
 const homePage = await getHomePage();
 const settings = await getSettings();
 const recurringEvents = await getRecurringEvents();
 
-const featuredEvents = homePage?.featuredEvents?.length
-  ? [...homePage.featuredEvents].sort(
-      (a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
-    )
-  : await getUpcomingEventsLimited(3);
+// Fallback, falls im CMS noch keine Kernthemen-Kacheln gepflegt sind.
+const DEFAULT_CORE_TOPICS: CoreTopic[] = [
+  { _key: 'community', title: 'Gemeinschaft erleben', icon: 'community', link: '/gemeinschaft-erleben' },
+  { _key: 'faith', title: 'Glauben entdecken', icon: 'faith', link: '/glauben-entdecken' },
+  { _key: 'support', title: 'Unterstützung erleben', icon: 'support', link: '/unterstuetzung-erleben' },
+];
+const coreTopics = homePage?.coreTopics?.length ? homePage.coreTopics : DEFAULT_CORE_TOPICS;
 
-const featuredNews = homePage?.featuredNews?.length
-  ? homePage.featuredNews
-  : (await getNewsList()).slice(0, 3);
+// Bildmodus: das Hero-Hintergrundbild. Videomodus: zuerst das eigene Video-Vorschaubild, sonst
+// ersatzweise das Hero-Hintergrundbild. So gibt es immer ein Bild als unterste, dauerhafte Ebene —
+// das Video (falls vorhanden) spielt rein optisch darüber (siehe Markup weiter unten).
+const isVideoMode = homePage?.heroBackgroundType === 'video';
+const heroBaseImage = isVideoMode
+  ? (homePage?.heroVideoPoster?.asset ? homePage.heroVideoPoster : homePage?.heroBackgroundImage)
+  : homePage?.heroBackgroundImage;
+const hasHeroBackground = Boolean(heroBaseImage?.asset);
 
-const hasHeroBackground = Boolean(homePage?.heroBackgroundImage?.asset);
+const heroVideoAsset = homePage?.heroBackgroundVideo?.asset;
+const hasHeroVideo = isVideoMode && hasHeroBackground && Boolean(heroVideoAsset?.url);
+const heroVideoDisableOnMobile = homePage?.heroVideoDisableOnMobile ?? true;
 
 const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
 const heroBackgroundImageUrl = hasHeroBackground
-  ? urlFor(homePage!.heroBackgroundImage!).width(2000).quality(82).auto('format').fit('max').url()
+  ? urlFor(heroBaseImage!).width(2000).quality(82).auto('format').fit('max').url()
   : null;
 const heroBackgroundSrcset = hasHeroBackground
   ? HERO_BG_WIDTHS.map(
-      (w) => `${urlFor(homePage!.heroBackgroundImage!).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
+      (w) => `${urlFor(heroBaseImage!).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
     ).join(', ')
   : undefined;
 
@@ -49,10 +57,12 @@ const HERO_BG_POSITION_STYLE: Record<string, string> = {
 const heroBackgroundPositionStyle =
   HERO_BG_POSITION_STYLE[homePage?.heroBackgroundPosition ?? 'center center'] ?? 'center 55%';
 
+// Steuert nur noch die Breite des Beschreibungstexts unter dem Zitat (nicht mehr den ganzen Hero-Block,
+// damit das Zitat selbst unabhängig davon möglichst einzeilig breit sein darf).
 const HERO_TEXT_WIDTH_CLASS: Record<string, string> = {
-  narrow: 'lg:max-w-[440px]',
-  normal: 'lg:max-w-[560px]',
-  wide: 'lg:max-w-[680px]',
+  narrow: 'max-w-sm',
+  normal: 'max-w-md',
+  wide: 'max-w-lg',
 };
 const heroTextWidthClass = HERO_TEXT_WIDTH_CLASS[homePage?.heroTextWidth ?? 'normal'] ?? HERO_TEXT_WIDTH_CLASS.normal;
 
@@ -94,9 +104,9 @@ const HERO_BOTTOM_FADE_GRADIENT: Record<string, string> = {
 };
 
 const HERO_BOTTOM_FADE_HEIGHT: Record<string, number> = {
-  subtle: 140,
-  medium: 180,
-  strong: 220,
+  subtle: 90,
+  medium: 120,
+  strong: 150,
 };
 
 const heroBottomFadeStrength = homePage?.heroBottomFadeStrength ?? 'medium';
@@ -104,25 +114,31 @@ const heroBottomFadeGradient = HERO_BOTTOM_FADE_GRADIENT[heroBottomFadeStrength]
 const heroBottomFadeHeight = HERO_BOTTOM_FADE_HEIGHT[heroBottomFadeStrength] ?? HERO_BOTTOM_FADE_HEIGHT.medium;
 const heroBottomFadeStyle = `position: absolute; left: 0; right: 0; bottom: 0; height: ${heroBottomFadeHeight}px; background: ${heroBottomFadeGradient};`;
 
-const heroLeftGradientDesktop =
-  'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.94) 32%, rgba(248,245,238,0.72) 48%, rgba(248,245,238,0.22) 65%, rgba(248,245,238,0) 78%)';
-const heroLeftGradientCompact =
-  'linear-gradient(90deg, rgba(248,245,238,0.98) 0%, rgba(248,245,238,0.95) 40%, rgba(248,245,238,0.85) 58%, rgba(248,245,238,0.55) 72%, rgba(248,245,238,0.15) 88%, rgba(248,245,238,0) 100%)';
+// Dezenter, warmer Verlauf statt einer schweren, gleichmäßigen Abdunklung: das Bild (Bibel, Tisch,
+// Pflanzen) soll erkennbar bleiben. Ein warmer Espresso-Ton (statt des kühleren --color-ink) vertieft
+// gezielt die Zone hinter dem Text, ohne das ganze Foto gleichmäßig zu verdunkeln oder zu vergrauen.
+// Etwas kräftiger als zuvor, damit der Text auch über einem bewegten Hintergrundvideo sicher lesbar
+// bleibt — die Ränder des Bildes bleiben davon unberührt (Verlauf endet weiterhin bei 78 %).
+const heroCenterScrim =
+  'radial-gradient(ellipse 70% 62% at 50% 42%, rgba(42,30,18,0.46) 0%, rgba(42,30,18,0.26) 45%, rgba(42,30,18,0) 78%)';
 
-const showLivestream = Boolean(homePage?.livestreamVisible && (homePage?.livestreamUrl || homePage?.livestreamEmbedUrl));
-const livestreamLinkUrl = homePage?.livestreamUrl || homePage?.livestreamEmbedUrl;
+const heroIdentityName = homePage?.heroIdentityName ?? 'EF-Horhausen';
+const heroIdentityTagline = homePage?.heroIdentityTagline ?? 'Evangelische Freikirche Horhausen';
+const heroQuote = homePage?.heroHeading ?? 'Jesus lässt Menschen aufblühen';
+const heroBibleReference = homePage?.heroBibleReference ?? 'Johannes 10:10';
+const heroDescription = homePage?.heroText ?? 'Eine lebendige Gemeinschaft, in der Glaube wächst und Menschen aufblühen.';
+const heroCta = homePage?.primaryButton ?? { label: 'Entdecke unsere Gemeinde', url: '/ueber-uns' };
+const coreTopicsHeading = homePage?.coreTopicsHeading ?? 'Gemeinschaft. Glaube. Miteinander.';
 
-const heroInfoItems = homePage?.heroInfoItems ?? [];
 const visitAddress = settings?.visitAddress ?? settings?.address;
 ---
 
 <BaseLayout title="Willkommen" transparentHeader={hasHeroBackground}>
-  <section
-    class:list={[
-      'relative overflow-hidden',
-      hasHeroBackground ? 'flex min-h-[700px] items-center' : '',
-    ]}
-  >
+  <section class="min-h-hero relative flex items-center overflow-hidden">
+    {/* Unsichtbarer Marker ganz oben im Hero: Header.astro beobachtet ihn per IntersectionObserver,
+        um zwischen transparentem und eingefärbtem Zustand umzuschalten — ganz ohne Scroll-Listener. */}
+    <div id="hero-scroll-sentinel" class="pointer-events-none absolute top-0 left-0 h-6 w-px" aria-hidden="true" />
+
     {/* Hero-Background: fills the hero's own box exactly (inset-0), nothing more. */}
     <div class="absolute inset-0 z-0">
       {
@@ -138,6 +154,8 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
       {
         hasHeroBackground && (
           <>
+            {/* Bild bleibt als dauerhafte unterste Ebene liegen: Lade-/Fallback-Zustand für ein
+                eventuelles Video obendrüber — ganz ohne JavaScript, rein durch CSS-Stapelung. */}
             <img
               src={heroBackgroundImageUrl!}
               srcset={heroBackgroundSrcset}
@@ -147,155 +165,174 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
               style={`object-position: ${heroBackgroundPositionStyle};`}
               fetchpriority="high"
             />
-            {/* 1. dezenter allgemeiner heller Schleier */}
-            <div class="absolute inset-0 bg-paper/15" />
-            {/* 2. linker cremefarbener Verlauf für Textlesbarkeit (Desktop / Tablet+Mobile) */}
-            <div class="absolute inset-0 hidden lg:block" style={`background: ${heroLeftGradientDesktop};`} />
-            <div class="absolute inset-0 lg:hidden" style={`background: ${heroLeftGradientCompact};`} />
-            {/* 3. optionale zusätzliche Abdunklung */}
+            {
+              hasHeroVideo && (
+                <video
+                  class:list={[
+                    'absolute inset-0 h-full w-full object-cover motion-reduce:hidden',
+                    heroVideoDisableOnMobile && 'hidden sm:block',
+                  ]}
+                  style={`object-position: ${heroBackgroundPositionStyle};`}
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  preload="metadata"
+                  aria-hidden="true"
+                >
+                  <source src={heroVideoAsset!.url} type={heroVideoAsset!.mimeType || 'video/mp4'} />
+                </video>
+              )
+            }
+            {/* Dezenter dunkler Verlauf exakt hinter dem transparenten Header, damit Logo und
+                Navigation unabhängig vom Bildinhalt lesbar bleiben — der Header selbst bleibt
+                dadurch komplett durchsichtig, ohne eigenen Farbbalken. */}
+            <div
+              class="absolute inset-x-0 top-0 h-28 sm:h-32"
+              style="background: linear-gradient(to bottom, rgba(36,26,16,0.55) 0%, rgba(36,26,16,0.22) 60%, rgba(36,26,16,0) 100%);"
+            />
+            {/* 1. sehr leichter, gleichmäßiger Schleier — gerade genug, damit heller Text überall
+                 lesbar bleibt, ohne die warme Raumatmosphäre (Bibel, Tisch, Pflanzen) zu ertränken. */}
+            <div class="absolute inset-0 bg-[#241a10]/20" />
+            {/* 2. zusätzlicher, zur Mitte hin vertiefender Verlauf genau hinter dem Text */}
+            <div class="absolute inset-0" style={`background: ${heroCenterScrim};`} />
+            {/* 3. optionale zusätzliche Abdunklung (im CMS einstellbar) */}
             {heroOverlayOpacity > 0 && (
               <div class="absolute inset-0 bg-ink" style={`opacity: ${heroOverlayOpacity};`} />
             )}
-            {/* 4. weicher Übergang nach unten — bleibt vollständig innerhalb des Hero */}
+            {/* 4. weicher, aber kurzer Übergang nach unten — bleibt vollständig innerhalb des Hero */}
             {heroShowBottomFade && <div class="pointer-events-none" style={heroBottomFadeStyle} />}
           </>
         )
       }
     </div>
 
-    <Container
-      class:list={[
-        'relative z-10',
-        hasHeroBackground
-          ? 'pt-28 pb-20 sm:pt-32 lg:pt-36 lg:pb-28'
-          : 'grid grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24',
-      ]}
-    >
-      <div class:list={['motion-safe:animate-fade-up', hasHeroBackground && ['max-w-full sm:max-w-xl', heroTextWidthClass]]}>
-        {
-          homePage?.heroEyebrow && (
-            <p class="flex items-center gap-2 text-sm font-semibold tracking-wide text-anchor-600 uppercase">
-              <span class="h-px w-6 bg-anchor-400"></span>
-              {homePage.heroEyebrow}
-            </p>
-          )
-        }
-        <h1 class="mt-5 text-balance font-display text-4xl leading-[1.1] font-medium text-ink sm:text-5xl lg:text-[3.35rem]">
-          {homePage?.heroHeading ?? 'Willkommen bei Ankerpunkt'}
+    {/* Ein gemeinsamer, zentrierter Inhaltscontainer (statt dreier über die Hero-Höhe verteilter
+        Gruppen) — die drei Gruppen (Identität, Zitat+Bibelstelle, Beschreibung+CTA) gehören optisch
+        zusammen und werden allein über kontrollierte margin-top-Werte zwischen den Gruppen getrennt.
+        `items-center` auf dem Hero-`<section>` zentriert den gesamten Block vertikal; der leichte
+        negative Versatz schiebt den optischen Schwerpunkt minimal über die geometrische Mitte.
+        Eigene, etwas breitere Spalte (max-w-7xl statt der sonst sitenweiten max-w-6xl-Container-
+        Komponente), damit das große Zitat auf breiten Desktops genug Raum hat, um einzeilig zu bleiben. */}
+    <div class="relative z-10 mx-auto w-full max-w-7xl -translate-y-3 px-6 py-8 sm:py-10 sm:-translate-y-4 lg:px-8 lg:py-12 lg:-translate-y-6">
+      <div class="motion-safe:animate-fade-up mx-auto flex flex-col items-center text-center">
+        {/* Gruppe 1 — Gemeindeidentität: bildet bewusst eine kompakte, zurückhaltende Einheit — der
+            Name etwas fester, der ausgeschriebene Zusatz deutlich kleiner und leiser darunter. */}
+        <p class="flex flex-col items-center gap-1.5">
+          <span
+            class:list={[
+              'font-display text-lg font-semibold tracking-wide sm:text-xl',
+              hasHeroBackground ? 'text-paper [text-shadow:0_1px_10px_rgba(20,14,8,0.35)]' : 'text-ink',
+            ]}
+          >
+            {heroIdentityName}
+          </span>
+          <span
+            class:list={[
+              'text-xs font-medium tracking-[0.12em] sm:text-sm',
+              hasHeroBackground ? 'text-paper/70 [text-shadow:0_1px_8px_rgba(20,14,8,0.3)]' : 'text-ink-soft/80',
+            ]}
+          >
+            {heroIdentityTagline}
+          </span>
+        </p>
+
+        {/* Gruppe 2 — Zitat + Bibelstelle: als zusammengehörige Einheit mit knappem Abstand
+            zwischen den beiden. Auf Mobile/Tablet darf das Zitat ganz normal umbrechen
+            (text-balance verteilt die Zeilen ausgewogen). Ab lg steht es dank clamp()-Schriftgröße in
+            einer Zeile: die Größe wächst stufenlos mit der Viewport-Breite bis zu einem sicheren
+            Höchstwert (abgestimmt auf die Breite der Spalte oben) und bleibt darüber hinaus konstant —
+            „ … “ bricht dadurch bei keiner Desktopbreite um oder läuft über. */}
+        <h1
+          class:list={[
+            'mt-6 w-full max-w-4xl text-balance font-display font-medium tracking-[-0.01em] sm:mt-8',
+            'text-4xl leading-[1.25] sm:text-5xl',
+            'lg:mt-10 lg:max-w-none lg:text-nowrap lg:text-[clamp(2.1rem,4vw+0.5rem,3.7rem)] lg:leading-[1.2]',
+            hasHeroBackground ? 'text-paper [text-shadow:0_2px_22px_rgba(20,14,8,0.42)]' : 'text-ink',
+          ]}
+        >
+          <span aria-hidden="true">„</span>
+          {heroQuote}
+          <span aria-hidden="true">“</span>
         </h1>
-        {
-          homePage?.heroText && (
-            <p class="mt-5 max-w-lg text-pretty text-lg leading-relaxed text-ink-soft">{homePage.heroText}</p>
-          )
-        }
-        <div class="mt-8 flex flex-wrap gap-4">
-          {homePage?.primaryButton && <CtaButton href={homePage.primaryButton.url}>{homePage.primaryButton.label}</CtaButton>}
-          {
-            homePage?.secondaryButton && (
-              <CtaButton href={homePage.secondaryButton.url} variant="secondary">
-                {homePage.secondaryButton.label}
-              </CtaButton>
-            )
-          }
+
+        <p
+          class:list={[
+            'mt-3 text-sm font-medium tracking-wide italic sm:mt-4 sm:text-base',
+            hasHeroBackground ? 'text-paper/80 [text-shadow:0_1px_8px_rgba(20,14,8,0.3)]' : 'text-anchor-600',
+          ]}
+        >
+          {heroBibleReference}
+        </p>
+
+        {/* Gruppe 3 — Beschreibung + CTA: eigene Untereinheit mit knappem, harmonischem Abstand
+            zwischen Text und Button. */}
+        <p
+          class:list={[
+            'mx-auto mt-8 text-pretty text-lg leading-[1.7] sm:mt-10 sm:text-xl lg:mt-12',
+            heroTextWidthClass,
+            hasHeroBackground ? 'text-paper/90 [text-shadow:0_1px_10px_rgba(20,14,8,0.3)]' : 'text-ink-soft',
+          ]}
+        >
+          {heroDescription}
+        </p>
+
+        <div class="mt-6 sm:mt-7 lg:mt-8">
+          <CtaButton
+            href={heroCta.url}
+            variant={hasHeroBackground ? 'inverse' : 'primary'}
+            size={hasHeroBackground ? 'lg' : 'md'}
+            class="group"
+          >
+            {heroCta.label}
+            <svg viewBox="0 0 16 16" fill="none" class="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </CtaButton>
         </div>
-
-        {
-          heroInfoItems.length > 0 && (
-            <dl class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-ink/8 pt-6">
-              {heroInfoItems.map((item) => (
-                <div class="flex items-center gap-2 text-sm text-ink-soft">
-                  {item.icon === 'clock' && (
-                    <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0 text-anchor-500" aria-hidden="true">
-                      <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3" />
-                      <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
-                    </svg>
-                  )}
-                  {item.icon === 'users' && (
-                    <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0 text-anchor-500" aria-hidden="true">
-                      <circle cx="5.5" cy="6" r="2.2" stroke="currentColor" stroke-width="1.2" />
-                      <path d="M1.6 13c.4-2.2 2-3.5 3.9-3.5s3.5 1.3 3.9 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                      <circle cx="11.2" cy="6.4" r="1.8" stroke="currentColor" stroke-width="1.2" />
-                      <path d="M9.8 9.7c1.5.1 2.7 1.3 3 3.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                    </svg>
-                  )}
-                  {item.icon === 'pin' && (
-                    <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0 text-anchor-500" aria-hidden="true">
-                      <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
-                      <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
-                    </svg>
-                  )}
-                  <span>{item.text}</span>
-                </div>
-              ))}
-            </dl>
-          )
-        }
       </div>
+    </div>
 
-      {
-        !hasHeroBackground && (
-          <div class="motion-safe:animate-fade-up motion-safe:[animation-delay:150ms]">
-            <div class="relative mx-auto w-full max-w-xl lg:max-w-none">
-              <PlaceholderImage class="aspect-[4/5] w-full rounded-3xl" label="Ankerpunkt Gemeindehaus in Rengsdorf" />
-            </div>
-          </div>
-        )
-      }
-    </Container>
+    {
+      hasHeroBackground && (
+        <a
+          href="#kernthemen"
+          aria-label="Zum nächsten Bereich scrollen"
+          class:list={[
+            'group absolute bottom-10 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full',
+            'bg-ink/15 text-paper ring-1 ring-paper/40 backdrop-blur-sm',
+            'transition-colors duration-200 hover:bg-ink/25 hover:ring-paper/60',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper',
+            'motion-safe:animate-hero-chevron sm:bottom-12 sm:h-14 sm:w-14',
+            '[@media(max-height:640px)]:hidden',
+          ]}
+        >
+          <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 transition-transform duration-200 group-hover:translate-y-0.5 sm:h-7 sm:w-7" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      )
+    }
   </section>
 
-  <section class="py-20">
+  {/* Dünne Linie markiert bewusst den Beginn des Abschnitts, statt den Hero in eine lange,
+      unbestimmte helle Fläche auslaufen zu lassen (siehe gekürzter Hero-Verlauf oben). */}
+  <section id="kernthemen" class="scroll-mt-20 border-t border-ink/8 py-20">
     <Container>
-      <SectionHeaderRow
-        eyebrow="Termine"
-        heading="Nächste Veranstaltungen"
-        linkHref="/veranstaltungen"
-        linkLabel="Alle Veranstaltungen ansehen →"
-      />
-
-      {
-        featuredEvents.length > 0 ? (
-          <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredEvents.map((event) => (
-              <EventCard event={event} />
-            ))}
-          </div>
-        ) : (
-          <p class="mt-10 text-ink-soft">Aktuell sind keine Veranstaltungen geplant. Schau bald wieder vorbei.</p>
-        )
-      }
-    </Container>
-  </section>
-
-  <section class="border-y border-ink/8 bg-paper-muted py-20">
-    <Container>
-      <SectionHeaderRow
-        eyebrow="Aktuelles"
-        heading="Neuigkeiten aus der Gemeinde"
-        linkHref="/neuigkeiten"
-        linkLabel="Alle Neuigkeiten ansehen →"
-      />
-
-      {
-        featuredNews.length > 0 ? (
-          <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredNews.map((news) => (
-              <NewsCard news={news} />
-            ))}
-          </div>
-        ) : (
-          <p class="mt-10 text-ink-soft">Aktuell gibt es keine Neuigkeiten.</p>
-        )
-      }
+      <SectionHeading heading={coreTopicsHeading} align="center" class="mx-auto" />
+      <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {coreTopics.map((topic) => (
+          <CoreTopicCard topic={topic} class="h-full" />
+        ))}
+      </div>
     </Container>
   </section>
 
   {
     recurringEvents.length > 0 && (
-      <section class="py-20">
+      <section class="border-y border-ink/8 bg-paper-muted py-20">
         <Container>
           <SectionHeaderRow
-            eyebrow="Jede Woche"
             heading="Regelmäßige Veranstaltungen"
             text="Angebote, die regelmäßig stattfinden – für Kinder, Jugendliche und Erwachsene."
           />
@@ -310,36 +347,16 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
     )
   }
 
-  {
-    showLivestream && (
-      <section class="bg-anchor-900 py-20 text-paper">
-        <Container class="flex flex-col items-start gap-6">
-          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-anchor-800 ring-1 ring-anchor-700">
-            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-paper" aria-hidden="true">
-              <path d="M5 7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.5" />
-              <path d="M15 10l4-2.5v9L15 14" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-            </svg>
-          </span>
-          <SectionHeading
-            eyebrow={homePage?.livestreamEyebrow}
-            heading={homePage?.livestreamHeadline || 'Gottesdienst per Livestream verfolgen'}
-            text={homePage?.livestreamText}
-            class="text-paper [&_p]:text-anchor-100 [&_h2]:text-paper"
-          />
-          <CtaButton href={livestreamLinkUrl!} variant="inverse">{homePage?.livestreamButtonText || 'Zum Livestream'}</CtaButton>
-        </Container>
-      </section>
-    )
-  }
-
   <section class="py-20">
     <Container class="rounded-3xl bg-anchor-50 px-8 py-12 ring-1 ring-anchor-100 sm:px-16">
       <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
         <div>
           <SectionHeading
-            eyebrow="Besuch uns"
-            heading={settings?.visitHeading || 'Wir freuen uns auf dich'}
-            text={settings?.visitText || 'Ob zum Gottesdienst, einer Veranstaltung oder einfach auf einen Kaffee – komm gerne vorbei.'}
+            heading={settings?.visitHeading || 'Wir freuen uns auf dich!'}
+            text={
+              settings?.visitText ||
+              'Du hast Fragen, möchtest uns kennenlernen oder suchst den persönlichen Austausch? Wir freuen uns, von dir zu hören.'
+            }
           />
           {settings?.visitNote && <p class="mt-4 text-ink-soft">{settings.visitNote}</p>}
           <div class="mt-8">

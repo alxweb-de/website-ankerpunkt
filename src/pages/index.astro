@@ -3,7 +3,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
 import CtaButton from '../components/CtaButton.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import SectionHeaderRow from '../components/SectionHeaderRow.astro';
 import CoreTopicCard from '../components/CoreTopicCard.astro';
 import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
 import { urlFor } from '../lib/sanity/image';
@@ -337,7 +336,9 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
   </section>
 
   {/* Dünne Linie markiert bewusst den Beginn des Abschnitts, statt den Hero in eine lange,
-      unbestimmte helle Fläche auslaufen zu lassen (siehe gekürzter Hero-Verlauf oben). */}
+      unbestimmte helle Fläche auslaufen zu lassen (siehe gekürzter Hero-Verlauf oben).
+      Alle Abschnittsüberschriften der Startseite nutzen einheitlich die zentrierte SectionHeading
+      (max. ca. 670 px Breite) mit jeweils mt-12 Abstand zum folgenden Inhalt. */}
   <section id="kernthemen" class="scroll-mt-20 border-t border-ink/8 py-20">
     <Container>
       <SectionHeading heading={coreTopicsHeading} align="center" class="mx-auto" />
@@ -353,11 +354,13 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
     recurringEvents.length > 0 && (
       <section class="border-y border-ink/8 bg-paper-muted py-20">
         <Container>
-          <SectionHeaderRow
+          <SectionHeading
             heading="Regelmäßige Veranstaltungen"
             text="Angebote, die regelmäßig stattfinden – für Kinder, Jugendliche und Erwachsene."
+            align="center"
+            class="mx-auto"
           />
-          <div class="mt-10">
+          <div class="mt-12">
             <RecurringEventsSlider events={recurringEvents} />
           </div>
           <div class="mt-10 text-center">
@@ -370,23 +373,21 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 
   <section class="py-20">
     <Container class="rounded-3xl bg-anchor-50 px-8 py-12 ring-1 ring-anchor-100 sm:px-16">
-      <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <div>
-          <SectionHeading
-            heading={settings?.visitHeading || 'Wir freuen uns auf dich!'}
-            text={
-              settings?.visitText ||
-              'Du hast Fragen, möchtest uns kennenlernen oder suchst den persönlichen Austausch? Wir freuen uns, von dir zu hören.'
-            }
-          />
-          {settings?.visitNote && <p class="mt-4 text-ink-soft">{settings.visitNote}</p>}
-          <div class="mt-8">
-            <CtaButton href={settings?.visitButton?.url || '/kontakt'}>
-              {settings?.visitButton?.label || 'Kontakt aufnehmen'}
-            </CtaButton>
-          </div>
-        </div>
-        <div class="space-y-4 text-ink-soft">
+      {/* Zentrierter Überschriftenblock wie in den übrigen Startseitenabschnitten; darunter die
+          Kontaktangaben als zentrierte Zeile (Icon + Text bleiben je Eintrag linksbündig) und der
+          CTA mittig als Abschluss. */}
+      <div class="flex flex-col items-center text-center">
+        <SectionHeading
+          heading={settings?.visitHeading || 'Wir freuen uns auf dich!'}
+          text={
+            settings?.visitText ||
+            'Du hast Fragen, möchtest uns kennenlernen oder suchst den persönlichen Austausch? Wir freuen uns, von dir zu hören.'
+          }
+          align="center"
+          class="mx-auto"
+        />
+        {settings?.visitNote && <p class="mx-auto mt-4 max-w-2xl text-pretty text-ink-soft">{settings.visitNote}</p>}
+        <div class="mt-12 flex flex-col items-start gap-x-10 gap-y-4 text-left text-ink-soft sm:flex-row sm:flex-wrap sm:justify-center">
           {
             visitAddress && (
               <p class="flex items-start gap-3">
@@ -433,6 +434,11 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
               </p>
             ))
           }
+        </div>
+        <div class="mt-10">
+          <CtaButton href={settings?.visitButton?.url || '/kontakt'}>
+            {settings?.visitButton?.label || 'Kontakt aufnehmen'}
+          </CtaButton>
         </div>
       </div>
     </Container>

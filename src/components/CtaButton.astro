@@ -8,7 +8,9 @@ interface Props {
 
 const { href, variant = 'primary', size = 'md', class: className = '' } = Astro.props;
 
-const isExternal = /^https?:\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:');
+// Nur echte Webadressen öffnen einen neuen Tab; mailto:/tel: übergeben direkt an E-Mail-Programm
+// bzw. Telefon-App — ein zusätzlicher (leerer) Tab wäre dort überflüssig.
+const isExternal = /^https?:\/\//.test(href);
 
 const variants = {
   primary:

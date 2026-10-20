@@ -52,15 +52,16 @@
     }
   }
 
-  /* Kombiniert mit der horizontalen -translate-x-1/2-Zentrierung des Elements — beide Transforms
-     müssen in jedem Keyframe zusammen stehen, sonst würde die Animation die Zentrierung überschreiben. */
+  /* Nur vertikales Wippen: Der Scroll-Pfeil wird per inset-x-0 + mx-auto zentriert (ohne Transform).
+     Ein translateX(-50%) hier würde sich mit Tailwinds separater `translate`-Eigenschaft addieren
+     und den Pfeil um eine halbe Breite nach links verschieben. */
   @keyframes hero-chevron {
     0%,
     100% {
-      transform: translateX(-50%) translateY(0);
+      transform: translateY(0);
     }
     50% {
-      transform: translateX(-50%) translateY(6px);
+      transform: translateY(6px);
     }
   }
 }

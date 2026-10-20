@@ -7,10 +7,15 @@ import type { RecurringEventSummary } from '../lib/sanity/types';
 
 interface Props {
   event: RecurringEventSummary;
+  // „slider“: verfeinerte Darstellung für den Startseiten-Slider (etwas präsentere Typografie,
+  // reservierte Zeilen für gleich hohe Inhalte, sichtbarer Fokusrahmen). „default“ bleibt
+  // unverändert für die Veranstaltungsübersicht.
+  variant?: 'default' | 'slider';
   class?: string;
 }
 
-const { event, class: className = '' } = Astro.props;
+const { event, variant = 'default', class: className = '' } = Astro.props;
+const isSlider = variant === 'slider';
 const displayMode = event.mainImage?.displayMode ?? 'contain';
 const cropPosition = event.mainImage?.cropPosition ?? 'center';
 const objectPositionClass = { top: 'object-top', center: 'object-center', bottom: 'object-bottom' }[cropPosition];
@@ -22,7 +27,15 @@ const href = event.slug?.current ? `/regelmaessige-veranstaltungen/${event.slug.
 const Tag = href ? 'a' : 'div';
 ---
 
-<Tag href={href} class:list={['group flex flex-col overflow-hidden card-shell', className]}>
+<Tag
+  href={href}
+  class:list={[
+    'group flex flex-col overflow-hidden card-shell',
+    isSlider &&
+      'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-anchor-600',
+    className,
+  ]}
+>
   <MediaFrame class:list={['aspect-[16/10] w-full', displayMode === 'contain' && 'bg-anchor-50/60']}>
     {
       imageUrl ? (
@@ -45,9 +58,9 @@ const Tag = href ? 'a' : 'div';
       </span>
     )}
   </MediaFrame>
-  <div class="flex flex-1 flex-col gap-2.5 p-6">
+  <div class:list={['flex flex-1 flex-col p-6', isSlider ? 'gap-3 lg:p-7' : 'gap-2.5']}>
     {scheduleSummary && (
-      <p class="flex min-w-0 items-center gap-1.5 text-sm text-ink-soft/80">
+      <p class:list={['flex min-w-0 items-center gap-1.5 text-sm', isSlider ? 'font-medium text-ink-soft' : 'text-ink-soft/80']}>
         <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0 text-anchor-600" aria-hidden="true">
           <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3" />
           <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
@@ -55,12 +68,33 @@ const Tag = href ? 'a' : 'div';
         <span class="truncate">{scheduleSummary}</span>
       </p>
     )}
-    <h3 class="font-display text-xl font-medium text-ink">{event.title}</h3>
-    {event.excerpt && <p class="line-clamp-2 text-sm leading-relaxed text-ink-soft">{event.excerpt}</p>}
+    {/* Slider: Titel auf max. 2 Zeilen, Beschreibung reserviert immer genau 2 Zeilen — zusammen mit
+        den gleich hohen Slider-Elementen und mt-auto am Link stehen „Mehr erfahren“ und die
+        Kartenunterkante in allen Karten auf derselben Höhe, egal wie lang die CMS-Texte sind. */}
+    <h3
+      class:list={[
+        'font-display font-medium text-ink',
+        isSlider ? 'line-clamp-2 text-[1.375rem] leading-[1.25] lg:text-2xl' : 'text-xl',
+      ]}
+    >
+      {event.title}
+    </h3>
+    {
+      isSlider ? (
+        <p class="line-clamp-2 min-h-[3.25em] text-[0.9375rem] leading-[1.625] text-ink-soft">{event.excerpt}</p>
+      ) : (
+        event.excerpt && <p class="line-clamp-2 text-sm leading-relaxed text-ink-soft">{event.excerpt}</p>
+      )
+    }
     {
       href && (
-        <div class="mt-auto flex items-center justify-end border-t border-ink/8 pt-3">
-          <span class="flex shrink-0 items-center gap-1 text-sm font-medium text-anchor-700">
+        <div class:list={['mt-auto flex items-center justify-end border-t border-ink/8', isSlider ? 'pt-4' : 'pt-3']}>
+          <span
+            class:list={[
+              'flex shrink-0 items-center gap-1 text-sm font-medium text-anchor-700',
+              isSlider && 'transition-colors group-hover:text-anchor-900',
+            ]}
+          >
             Mehr erfahren
             <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />

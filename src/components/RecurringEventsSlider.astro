@@ -9,9 +9,11 @@ interface Props {
 const { events } = Astro.props;
 
 // Only turn on looping/arrows/autoplay once there are more cards than the largest
-// simultaneously visible count (4, on desktop). With fewer, everything already fits
-// or the native scroll-snap track alone is enough to swipe through on small screens.
-const enhanced = events.length > 4;
+// simultaneously visible count (3, from md upwards — see the flex-basis classes below).
+// With fewer, everything already fits or the native scroll-snap track alone is enough
+// to swipe through on small screens.
+const MAX_VISIBLE = 3;
+const enhanced = events.length > MAX_VISIBLE;
 
 // Full duplicate on each side keeps the illusion seamless in both directions no matter
 // how many real cards there are. These clones are visual filler only: `inert` removes
@@ -42,13 +44,24 @@ const trackItems = enhanced
     >
       {
         trackItems.map(({ event, key, real }) => (
+          // Ohne Endlos-Modus (≤ 3 Karten) wird die Kartengruppe über Auto-Margins an der ersten und
+          // letzten Karte zentriert. Anders als justify-center auf dem Scroll-Track werden Auto-Margins
+          // bei Überlauf (z. B. Smartphone) automatisch 0 — die Karten beginnen dann wieder bündig links
+          // und bleiben per Swipe vollständig erreichbar. Im Endlos-Modus füllt der Track ohnehin die
+          // ganze Breite, dort bleibt alles unverändert.
+          // min-w-0: Sonst würde die einzeilige (truncate) Terminzeile die Mindestbreite einer Karte
+          // vorgeben — Karten wären dann unterschiedlich breit und der Track liefe ungewollt über.
           <li
-            class="shrink-0 snap-start [flex:0_0_86%] sm:[flex:0_0_calc(50%_-_0.75rem)] md:[flex:0_0_calc(33.333%_-_1rem)] lg:[flex:0_0_calc(25%_-_1.125rem)]"
+            class:list={[
+              // Desktop bewusst 3 statt 4 Karten pro Ansicht: etwas präsentere, aber nicht übergroße Karten.
+              'min-w-0 shrink-0 snap-start [flex:0_0_86%] sm:[flex:0_0_calc(50%_-_0.75rem)] md:[flex:0_0_calc(33.333%_-_1rem)]',
+              !enhanced && 'first:ms-auto last:me-auto',
+            ]}
             data-key={key}
             aria-hidden={real ? undefined : 'true'}
             inert={real ? undefined : true}
           >
-            <RecurringEventCard event={event} class="h-full" />
+            <RecurringEventCard event={event} variant="slider" class="h-full" />
           </li>
         ))
       }

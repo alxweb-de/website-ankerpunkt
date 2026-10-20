@@ -132,9 +132,19 @@ const heroCta = homePage?.primaryButton ?? { label: 'Entdecke unsere Gemeinde', 
 const coreTopicsHeading = homePage?.coreTopicsHeading ?? 'Gemeinschaft. Glaube. Miteinander.';
 
 const visitAddress = settings?.visitAddress ?? settings?.address;
+
+// Der Kontakt-CTA öffnet direkt das E-Mail-Programm mit der allgemeinen Kontakt-E-Mail aus den
+// Globalen Einstellungen (Kontakt & Adresse → „E-Mail“). Ohne gültige Adresse wird der Button
+// ausgeblendet, statt einen leeren bzw. kaputten mailto:-Link zu erzeugen.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const contactEmail = settings?.email?.trim();
+const contactMailto =
+  contactEmail && EMAIL_PATTERN.test(contactEmail)
+    ? `mailto:${contactEmail}?subject=${encodeURIComponent(`Kontaktanfrage über ${heroIdentityName}`)}`
+    : null;
 ---
 
-<BaseLayout title="Willkommen" transparentHeader={hasHeroBackground}>
+<BaseLayout title="Willkommen" transparentHeader={hasHeroBackground} footerBorder={false}>
   <section class="min-h-hero relative flex items-center overflow-hidden">
     {/* Unsichtbarer Marker ganz oben im Hero: Header.astro beobachtet ihn per IntersectionObserver,
         um zwischen transparentem und eingefärbtem Zustand umzuschalten — ganz ohne Scroll-Listener. */}
@@ -313,13 +323,15 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
       </div>
     </div>
 
+    {/* Scroll-Pfeil horizontal zentriert über inset-x-0 + mx-auto statt left-1/2 + translate: so kann
+        die Wipp-Animation (transform) die Zentrierung nicht verschieben. */}
     {
       hasHeroBackground && (
         <a
           href="#kernthemen"
           aria-label="Zum nächsten Bereich scrollen"
           class:list={[
-            'group absolute bottom-10 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full',
+            'group absolute inset-x-0 bottom-10 z-10 mx-auto flex h-12 w-12 items-center justify-center rounded-full',
             'bg-ink/15 text-paper ring-1 ring-paper/40 backdrop-blur-sm',
             'transition-colors duration-200 hover:bg-ink/25 hover:ring-paper/60',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper',
@@ -335,11 +347,11 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
     }
   </section>
 
-  {/* Dünne Linie markiert bewusst den Beginn des Abschnitts, statt den Hero in eine lange,
-      unbestimmte helle Fläche auslaufen zu lassen (siehe gekürzter Hero-Verlauf oben).
+  {/* Abschnittswechsel ohne Trennlinien: Der Hero läuft über seinen Verlauf nahtlos in den hellen
+      Hintergrund aus, danach trennen nur Weißraum und Hintergrundwechsel die Bereiche.
       Alle Abschnittsüberschriften der Startseite nutzen einheitlich die zentrierte SectionHeading
       (max. ca. 670 px Breite) mit jeweils mt-12 Abstand zum folgenden Inhalt. */}
-  <section id="kernthemen" class="scroll-mt-20 border-t border-ink/8 py-20">
+  <section id="kernthemen" class="scroll-mt-20 py-20">
     <Container>
       <SectionHeading heading={coreTopicsHeading} align="center" class="mx-auto" />
       <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -352,7 +364,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 
   {
     recurringEvents.length > 0 && (
-      <section class="border-y border-ink/8 bg-paper-muted py-20">
+      <section class="bg-paper-muted py-20">
         <Container>
           <SectionHeading
             heading="Regelmäßige Veranstaltungen"
@@ -364,19 +376,24 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
             <RecurringEventsSlider events={recurringEvents} />
           </div>
           <div class="mt-10 text-center">
-            <CtaButton href="/veranstaltungen" variant="secondary">Alle regelmäßigen Veranstaltungen</CtaButton>
+            <CtaButton href="/veranstaltungen" variant="secondary" size="lg" class="max-sm:px-6 max-sm:text-[0.9375rem]">
+              Alle regelmäßigen Veranstaltungen
+            </CtaButton>
           </div>
         </Container>
       </section>
     )
   }
 
-  <section class="py-20">
-    <Container class="rounded-3xl bg-anchor-50 px-8 py-12 ring-1 ring-anchor-100 sm:px-16">
-      {/* Zentrierter Überschriftenblock wie in den übrigen Startseitenabschnitten; darunter die
-          Kontaktangaben als zentrierte Zeile (Icon + Text bleiben je Eintrag linksbündig) und der
-          CTA mittig als Abschluss. */}
-      <div class="flex flex-col items-center text-center">
+  <section class="py-16 sm:py-20">
+    <Container>
+      {/* Kontaktfläche als eigene Box innerhalb des Containers (statt Box-Klassen auf dem Container,
+          deren Innenabstände sonst mit dessen px-Klassen kollidieren). Hierarchie: Einladung →
+          zentrale Handlungsaufforderung → praktische Besuchsinformationen als ruhige Ergänzung.
+          Bewusst kompakt gehalten, damit der Bereich nicht wie ein eigener großer Seitenabschnitt
+          wirkt. Der CMS-Hinweistext (visitNote) wird hier nicht angezeigt — er wiederholt die
+          Einladung inhaltlich; das Feld bleibt im CMS erhalten. */}
+      <div class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-9 text-center sm:px-12 lg:px-16">
         <SectionHeading
           heading={settings?.visitHeading || 'Wir freuen uns auf dich!'}
           text={
@@ -386,87 +403,134 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
           align="center"
           class="mx-auto"
         />
-        {settings?.visitNote && <p class="mx-auto mt-4 max-w-2xl text-pretty text-ink-soft">{settings.visitNote}</p>}
-        <div class="mt-12 flex flex-col items-start gap-x-10 gap-y-4 text-left text-ink-soft sm:flex-row sm:flex-wrap sm:justify-center">
+        {
+          contactMailto && (
+            <div class="mt-6">
+              <CtaButton
+                href={contactMailto}
+                size="lg"
+                class="shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow-[0_10px_24px_-10px_rgba(21,48,46,0.6)]"
+              >
+                {settings?.visitButton?.label || 'Kontakt aufnehmen'}
+              </CtaButton>
+            </div>
+          )
+        }
+
+        {/* Praktische Informationen: je Eintrag Icon über zentriertem Text — auf dem Smartphone
+            untereinander, ab md in drei gleich breiten Spalten. flex-wrap + feste Spaltenbreiten
+            halten auch eine abweichende Anzahl Einträge mittig. */}
+        <ul class="mt-7 flex w-full flex-wrap justify-center gap-x-8 gap-y-5 text-base leading-normal text-ink-soft">
           {
             visitAddress && (
-              <p class="flex items-start gap-3">
-                <svg viewBox="0 0 16 16" fill="none" class="mt-0.5 h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-                  <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
-                  <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
-                </svg>
-                <span>
-                  {visitAddress.street}<br />
-                  {visitAddress.zip} {visitAddress.city}
+              <li class="flex w-full flex-col items-center gap-2.5 md:w-[calc((100%-4rem)/3)]">
+                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-paper/80 text-anchor-700" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none" class="h-5 w-5">
+                    <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
+                    <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
+                  </svg>
                 </span>
-              </p>
+                <address class="not-italic">
+                  <span class="block font-medium text-ink">{visitAddress.street}</span>
+                  {visitAddress.zip} {visitAddress.city}
+                </address>
+              </li>
             )
           }
           {
             settings?.phone && (
-              <p class="flex items-center gap-3">
-                <svg viewBox="0 0 16 16" fill="none" class="h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-                  <path d="M3 3.5c0-.6.4-1 1-1h2l1.3 3-1.3 1a8 8 0 0 0 4 4l1-1.3 3 1.3v2c0 .6-.4 1-1 1A10 10 0 0 1 3 3.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
-                </svg>
-                <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class="hover:text-anchor-800">{settings.phone}</a>
-              </p>
-            )
-          }
-          {
-            settings?.email && (
-              <p class="flex items-center gap-3">
-                <svg viewBox="0 0 16 16" fill="none" class="h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-                  <rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-                  <path d="m3 4.5 5 4 5-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <a href={`mailto:${settings.email}`} class="hover:text-anchor-800">{settings.email}</a>
-              </p>
+              <li class="flex w-full flex-col items-center gap-2.5 md:w-[calc((100%-4rem)/3)]">
+                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-paper/80 text-anchor-700" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none" class="h-5 w-5">
+                    <path d="M3 3.5c0-.6.4-1 1-1h2l1.3 3-1.3 1a8 8 0 0 0 4 4l1-1.3 3 1.3v2c0 .6-.4 1-1 1A10 10 0 0 1 3 3.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class="font-medium text-ink hover:text-anchor-700">{settings.phone}</a>
+              </li>
             )
           }
           {
             settings?.officeHours?.map((entry) => (
-              <p class="flex items-start gap-3">
-                <svg viewBox="0 0 16 16" fill="none" class="mt-0.5 h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-                  <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2" />
-                  <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                </svg>
-                <span><strong class="font-medium text-ink">{entry.label}:</strong> {entry.hours}</span>
-              </p>
+              <li class="flex w-full flex-col items-center gap-2.5 md:w-[calc((100%-4rem)/3)]">
+                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-paper/80 text-anchor-700" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none" class="h-5 w-5">
+                    <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2" />
+                    <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <p class="text-balance">
+                  <span class="block font-medium text-ink">{entry.label}</span>
+                  {entry.hours}
+                </p>
+              </li>
             ))
           }
-        </div>
-        <div class="mt-10">
-          <CtaButton href={settings?.visitButton?.url || '/kontakt'}>
-            {settings?.visitButton?.label || 'Kontakt aufnehmen'}
-          </CtaButton>
-        </div>
+        </ul>
       </div>
     </Container>
   </section>
 </BaseLayout>
 
 <script>
-  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup). Bei
-  // reduzierter Bewegung wird es angehalten — das Vorschaubild darunter bleibt dann sichtbar.
+  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup), und lässt
+  // es nur laufen, solange der Hero sichtbar und der Tab im Vordergrund ist. pause()/play() setzen an
+  // derselben Stelle fort; bereits geladene Videodaten bleiben erhalten. Bei reduzierter Bewegung
+  // bleibt das Video angehalten — das Vorschaubild darunter ist dann sichtbar.
   const video = document.getElementById('hero-video') as HTMLVideoElement | null;
-  if (video) {
+  const hero = video?.closest('section');
+  if (video && hero) {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const abort = new AbortController();
+    const { signal } = abort;
+    // Bis der Observer zum ersten Mal meldet, gilt der Hero als sichtbar (Seite startet oben).
+    let heroInView = true;
+
     const markPlaying = () => (video.dataset.playing = 'true');
-    const tryPlay = () => {
-      if (reducedMotion.matches) {
-        video.pause();
+    const sync = () => {
+      const shouldPlay = heroInView && document.visibilityState === 'visible' && !reducedMotion.matches;
+      if (!shouldPlay) {
+        if (!video.paused) video.pause();
         return;
       }
+      if (!video.paused) return;
       // Manche Browser (v. a. iOS Safari) brauchen das muted-Property zusätzlich zum Attribut.
       video.muted = true;
       video.play().catch(() => {
-        // Autoplay blockiert (z. B. Stromsparmodus): Vorschaubild bleibt stehen.
+        // Wiedergabe blockiert (z. B. Stromsparmodus): Vorschaubild bzw. letzter Frame bleibt stehen.
       });
     };
 
-    video.addEventListener('playing', markPlaying);
+    // Der Observer meldet sich nur beim Über- bzw. Unterschreiten der Grenze, nicht bei jedem
+    // Scroll-Pixel. Der negative obere rootMargin zählt den Hero erst dann als „nicht mehr sichtbar“,
+    // wenn höchstens noch ein schmaler Streifen (20 % der Viewport-Höhe) oben hervorschaut.
+    const observer =
+      'IntersectionObserver' in window
+        ? new IntersectionObserver(
+            ([entry]) => {
+              heroInView = entry.isIntersecting;
+              sync();
+            },
+            { rootMargin: '-20% 0px 0px 0px', threshold: 0 },
+          )
+        : null;
+    observer?.observe(hero);
+
+    video.addEventListener('playing', markPlaying, { signal });
+    document.addEventListener('visibilitychange', sync, { signal });
+    reducedMotion.addEventListener('change', sync, { signal });
+    // Endgültiges Verlassen der Seite: Observer und Listener aufräumen. Bleibt die Seite im
+    // Back-/Forward-Cache (persisted), bleibt alles aktiv, damit das Video beim Zurückkehren weiterläuft.
+    window.addEventListener(
+      'pagehide',
+      (event) => {
+        if (event.persisted) return;
+        observer?.disconnect();
+        abort.abort();
+      },
+      { signal },
+    );
+
     if (!video.paused && video.readyState > 2) markPlaying();
-    tryPlay();
-    reducedMotion.addEventListener('change', tryPlay);
+    sync();
   }
 </script>

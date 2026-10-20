@@ -9,9 +9,10 @@ interface Props {
   description?: string;
   ogImage?: string;
   transparentHeader?: boolean;
+  footerBorder?: boolean;
 }
 
-const { title, description, ogImage, transparentHeader = false } = Astro.props;
+const { title, description, ogImage, transparentHeader = false, footerBorder = true } = Astro.props;
 const settings = await getSettings();
 
 const siteName = settings?.churchName ?? 'Ankerpunkt';
@@ -64,6 +65,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin)
     <main id="main-content" class="flex-1">
       <slot />
     </main>
-    <Footer settings={settings} />
+    <Footer settings={settings} borderTop={footerBorder} />
   </body>
 </html>

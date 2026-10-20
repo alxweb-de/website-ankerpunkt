@@ -33,7 +33,9 @@ const hasHeroBackground = Boolean(heroBaseImage?.asset);
 
 const heroVideoAsset = homePage?.heroBackgroundVideo?.asset;
 const hasHeroVideo = isVideoMode && hasHeroBackground && Boolean(heroVideoAsset?.url);
-const heroVideoDisableOnMobile = homePage?.heroVideoDisableOnMobile ?? true;
+// Das Video läuft standardmäßig auf allen Bildschirmgrößen. Nur eine ausdrücklich im CMS gesetzte
+// Deaktivierung blendet es auf Smartphones aus — ein fehlender Wert zählt nicht als „deaktiviert“.
+const heroVideoDisableOnMobile = homePage?.heroVideoDisableOnMobile === true;
 
 const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
 const heroBackgroundImageUrl = hasHeroBackground
@@ -167,21 +169,34 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
             />
             {
               hasHeroVideo && (
-                <video
-                  class:list={[
-                    'absolute inset-0 h-full w-full object-cover motion-reduce:hidden',
-                    heroVideoDisableOnMobile && 'hidden sm:block',
-                  ]}
-                  style={`object-position: ${heroBackgroundPositionStyle};`}
-                  autoplay
-                  muted
-                  loop
-                  playsinline
-                  preload="metadata"
-                  aria-hidden="true"
-                >
-                  <source src={heroVideoAsset!.url} type={heroVideoAsset!.mimeType || 'video/mp4'} />
-                </video>
+                <>
+                  {/* Das Video bleibt unsichtbar (opacity-0), bis es tatsächlich abspielt — solange es
+                      lädt, blockiert ist (z. B. iOS-Stromsparmodus) oder das Format nicht unterstützt
+                      wird, sieht man darunter das Vorschaubild statt eines schwarzen Rahmens oder eines
+                      Play-Buttons. Ohne JavaScript wird es per <noscript> direkt eingeblendet. */}
+                  <video
+                    id="hero-video"
+                    class:list={[
+                      'absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 ease-out data-[playing=true]:opacity-100 motion-reduce:hidden',
+                      heroVideoDisableOnMobile && 'max-sm:hidden',
+                    ]}
+                    style={`object-position: ${heroBackgroundPositionStyle};`}
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    disablepictureinpicture
+                    disableRemotePlayback
+                    preload="metadata"
+                    aria-hidden="true"
+                    tabindex="-1"
+                  >
+                    <source src={heroVideoAsset!.url} type={heroVideoAsset!.mimeType || 'video/mp4'} />
+                  </video>
+                  <noscript>
+                    <style>{'#hero-video { opacity: 1; }'}</style>
+                  </noscript>
+                </>
               )
             }
             {/* Dezenter dunkler Verlauf exakt hinter dem transparenten Header, damit Logo und
@@ -213,15 +228,19 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
         `items-center` auf dem Hero-`<section>` zentriert den gesamten Block vertikal; der leichte
         negative Versatz schiebt den optischen Schwerpunkt minimal über die geometrische Mitte.
         Eigene, etwas breitere Spalte (max-w-7xl statt der sonst sitenweiten max-w-6xl-Container-
-        Komponente), damit das große Zitat auf breiten Desktops genug Raum hat, um einzeilig zu bleiben. */}
-    <div class="relative z-10 mx-auto w-full max-w-7xl -translate-y-3 px-6 py-8 sm:py-10 sm:-translate-y-4 lg:px-8 lg:py-12 lg:-translate-y-6">
+        Komponente), damit das große Zitat auf breiten Desktops genug Raum hat, um einzeilig zu bleiben.
+        Smartphones quer (landscape-short): Die Bildschirmhöhe reicht nicht, um den Block unter dem
+        fixierten Header zu zentrieren — daher ohne Versatz, mit oberem Abstand für Header + Safe-Area
+        und kompakteren Abständen. Passt der Inhalt trotzdem nicht, wächst der Hero (min-height) einfach
+        über die Bildschirmhöhe hinaus und man scrollt ganz normal weiter. */}
+    <div class="relative z-10 mx-auto w-full max-w-7xl -translate-y-3 px-6 py-8 sm:py-10 sm:-translate-y-4 lg:px-8 lg:py-12 lg:-translate-y-6 landscape-short:translate-y-0 landscape-short:pt-[calc(5.25rem+env(safe-area-inset-top,0px))] landscape-short:pb-10">
       <div class="motion-safe:animate-fade-up mx-auto flex flex-col items-center text-center">
         {/* Gruppe 1 — Gemeindeidentität: bildet bewusst eine kompakte, zurückhaltende Einheit — der
             Name etwas fester, der ausgeschriebene Zusatz deutlich kleiner und leiser darunter. */}
-        <p class="flex flex-col items-center gap-1.5">
+        <p class="flex flex-col items-center gap-1.5 landscape-short:gap-1">
           <span
             class:list={[
-              'font-display text-lg font-semibold tracking-wide sm:text-xl',
+              'font-display text-lg font-semibold tracking-wide sm:text-xl landscape-short:text-lg',
               hasHeroBackground ? 'text-paper [text-shadow:0_1px_10px_rgba(20,14,8,0.35)]' : 'text-ink',
             ]}
           >
@@ -229,7 +248,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
           </span>
           <span
             class:list={[
-              'text-xs font-medium tracking-[0.12em] sm:text-sm',
+              'text-xs font-medium tracking-[0.12em] sm:text-sm landscape-short:text-xs',
               hasHeroBackground ? 'text-paper/70 [text-shadow:0_1px_8px_rgba(20,14,8,0.3)]' : 'text-ink-soft/80',
             ]}
           >
@@ -248,6 +267,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
             'mt-6 w-full max-w-4xl text-balance font-display font-medium tracking-[-0.01em] sm:mt-8',
             'text-4xl leading-[1.25] sm:text-5xl',
             'lg:mt-10 lg:max-w-none lg:text-nowrap lg:text-[clamp(2.1rem,4vw+0.5rem,3.7rem)] lg:leading-[1.2]',
+            'landscape-short:mt-4 landscape-short:max-w-3xl landscape-short:text-wrap landscape-short:text-[2rem] landscape-short:leading-[1.2]',
             hasHeroBackground ? 'text-paper [text-shadow:0_2px_22px_rgba(20,14,8,0.42)]' : 'text-ink',
           ]}
         >
@@ -258,7 +278,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 
         <p
           class:list={[
-            'mt-3 text-sm font-medium tracking-wide italic sm:mt-4 sm:text-base',
+            'mt-3 text-sm font-medium tracking-wide italic sm:mt-4 sm:text-base landscape-short:mt-2 landscape-short:text-sm',
             hasHeroBackground ? 'text-paper/80 [text-shadow:0_1px_8px_rgba(20,14,8,0.3)]' : 'text-anchor-600',
           ]}
         >
@@ -270,6 +290,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
         <p
           class:list={[
             'mx-auto mt-8 text-pretty text-lg leading-[1.7] sm:mt-10 sm:text-xl lg:mt-12',
+            'landscape-short:mt-5 landscape-short:text-base landscape-short:leading-relaxed',
             heroTextWidthClass,
             hasHeroBackground ? 'text-paper/90 [text-shadow:0_1px_10px_rgba(20,14,8,0.3)]' : 'text-ink-soft',
           ]}
@@ -277,7 +298,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
           {heroDescription}
         </p>
 
-        <div class="mt-6 sm:mt-7 lg:mt-8">
+        <div class="mt-6 sm:mt-7 lg:mt-8 landscape-short:mt-5">
           <CtaButton
             href={heroCta.url}
             variant={hasHeroBackground ? 'inverse' : 'primary'}
@@ -417,3 +438,29 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
     </Container>
   </section>
 </BaseLayout>
+
+<script>
+  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup). Bei
+  // reduzierter Bewegung wird es angehalten — das Vorschaubild darunter bleibt dann sichtbar.
+  const video = document.getElementById('hero-video') as HTMLVideoElement | null;
+  if (video) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const markPlaying = () => (video.dataset.playing = 'true');
+    const tryPlay = () => {
+      if (reducedMotion.matches) {
+        video.pause();
+        return;
+      }
+      // Manche Browser (v. a. iOS Safari) brauchen das muted-Property zusätzlich zum Attribut.
+      video.muted = true;
+      video.play().catch(() => {
+        // Autoplay blockiert (z. B. Stromsparmodus): Vorschaubild bleibt stehen.
+      });
+    };
+
+    video.addEventListener('playing', markPlaying);
+    if (!video.paused && video.readyState > 2) markPlaying();
+    tryPlay();
+    reducedMotion.addEventListener('change', tryPlay);
+  }
+</script>

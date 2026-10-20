@@ -60,14 +60,16 @@ const logoBoxWidthPx = Math.ceil(logoAspectRatio * LOGO_BOX_HEIGHT_SM_PX) + 12;
       : 'sticky border-b border-ink/8 bg-paper/95 backdrop-blur-md',
   ]}
 >
-  <Container class="flex h-18 items-center justify-between sm:h-20">
+  {/* Smartphones quer (landscape-short, siehe global.css): etwas niedrigerer Header, damit vom ohnehin
+      knappen Bildschirm mehr für den Inhalt bleibt. Desktop und Hochformat bleiben unverändert. */}
+  <Container class="flex h-18 items-center justify-between sm:h-20 landscape-short:h-16">
     <a href="/" class="flex items-center">
       {
         needsLogoCrossfade ? (
           // Beide Logos liegen übereinander in einer formatfesten Box (keine Layoutverschiebung)
           // und blenden rein per CSS-Opacity um — exakt synchron mit dem bereits vorhandenen
           // data-scrolled-Zustand des Headers, ganz ohne zusätzliches JavaScript.
-          <span class="relative block h-11 sm:h-14" style={`width: ${logoBoxWidthPx}px;`}>
+          <span class="relative block h-11 sm:h-14 landscape-short:h-11" style={`width: ${logoBoxWidthPx}px;`}>
             <img
               src={lightLogoUrl!}
               alt={churchName}
@@ -84,7 +86,7 @@ const logoBoxWidthPx = Math.ceil(logoAspectRatio * LOGO_BOX_HEIGHT_SM_PX) + 12;
           <img
             src={singleLogoUrl}
             alt={churchName}
-            class:list={['h-11 w-auto object-contain sm:h-14', transparent && 'drop-shadow-[0_1px_3px_rgba(28,31,30,0.18)]']}
+            class:list={['h-11 w-auto object-contain sm:h-14 landscape-short:h-11',transparent && 'drop-shadow-[0_1px_3px_rgba(28,31,30,0.18)]']}
           />
         ) : (
           <span class="flex flex-col leading-none">
@@ -166,7 +168,13 @@ const logoBoxWidthPx = Math.ceil(logoAspectRatio * LOGO_BOX_HEIGHT_SM_PX) + 12;
     </button>
   </Container>
 
-  <nav id="mobile-menu" aria-label="Mobile Navigation" class="hidden border-t border-ink/8 bg-paper xl:hidden">
+  {/* Im Querformat kann das Menü höher als der Bildschirm unter dem fixierten Header sein — dann
+      scrollt es in sich, statt unten abgeschnitten zu werden. */}
+  <nav
+    id="mobile-menu"
+    aria-label="Mobile Navigation"
+    class="hidden max-h-[calc(100svh-4.5rem)] overflow-y-auto overscroll-contain border-t border-ink/8 bg-paper sm:max-h-[calc(100svh-5rem)] xl:hidden landscape-short:max-h-[calc(100svh-4rem)]"
+  >
     <Container>
       <ul class="flex flex-col py-2">
         {

@@ -1,0 +1,133 @@
+---
+import { urlFor } from '../lib/sanity/image';
+import type { SanityFileData, SanityImageData } from '../lib/sanity/types';
+
+// Vollflächiges Hero-Hintergrundbild mit optionalem Hintergrundvideo darüber – gemeinsam genutzt von
+// Startseite und Über-uns-Seite. Muss in einem positionierten Container liegen (füllt ihn per inset-0);
+// Verläufe und Abdunklungen legt die jeweilige Seite selbst darüber.
+interface Props {
+  image: SanityImageData;
+  alt?: string;
+  /** CSS object-position für Bild und Video. */
+  position: string;
+  video?: SanityFileData['asset'];
+  disableVideoOnMobile?: boolean;
+}
+
+const { image, alt = '', position, video, disableVideoOnMobile = false } = Astro.props;
+
+const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
+const imageUrl = urlFor(image).width(2000).quality(82).auto('format').fit('max').url();
+const srcset = HERO_BG_WIDTHS.map(
+  (w) => `${urlFor(image).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
+).join(', ');
+const hasVideo = Boolean(video?.url);
+---
+
+{/* Bild bleibt als dauerhafte unterste Ebene liegen: Lade-/Fallback-Zustand für ein
+    eventuelles Video obendrüber — ganz ohne JavaScript, rein durch CSS-Stapelung. */}
+<img
+  src={imageUrl}
+  srcset={srcset}
+  sizes="100vw"
+  alt={alt}
+  class="absolute inset-0 h-full w-full object-cover"
+  style={`object-position: ${position};`}
+  fetchpriority="high"
+/>
+{
+  hasVideo && (
+    <>
+      {/* Das Video bleibt unsichtbar (opacity-0), bis es tatsächlich abspielt — solange es
+          lädt, blockiert ist (z. B. iOS-Stromsparmodus) oder das Format nicht unterstützt
+          wird, sieht man darunter das Vorschaubild statt eines schwarzen Rahmens oder eines
+          Play-Buttons. Ohne JavaScript wird es per <noscript> direkt eingeblendet. */}
+      <video
+        id="hero-video"
+        class:list={[
+          'absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 ease-out data-[playing=true]:opacity-100 motion-reduce:hidden',
+          disableVideoOnMobile && 'max-sm:hidden',
+        ]}
+        style={`object-position: ${position};`}
+        autoplay
+        muted
+        loop
+        playsinline
+        disablepictureinpicture
+        disableRemotePlayback
+        preload="metadata"
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        <source src={video!.url} type={video!.mimeType || 'video/mp4'} />
+      </video>
+      <noscript>
+        <style>{'#hero-video { opacity: 1; }'}</style>
+      </noscript>
+    </>
+  )
+}
+
+<script>
+  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup), und lässt
+  // es nur laufen, solange der Hero sichtbar und der Tab im Vordergrund ist. pause()/play() setzen an
+  // derselben Stelle fort; bereits geladene Videodaten bleiben erhalten. Bei reduzierter Bewegung
+  // bleibt das Video angehalten — das Vorschaubild darunter ist dann sichtbar.
+  const video = document.getElementById('hero-video') as HTMLVideoElement | null;
+  const hero = video?.closest('section');
+  if (video && hero) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const abort = new AbortController();
+    const { signal } = abort;
+    // Bis der Observer zum ersten Mal meldet, gilt der Hero als sichtbar (Seite startet oben).
+    let heroInView = true;
+
+    const markPlaying = () => (video.dataset.playing = 'true');
+    const sync = () => {
+      const shouldPlay = heroInView && document.visibilityState === 'visible' && !reducedMotion.matches;
+      if (!shouldPlay) {
+        if (!video.paused) video.pause();
+        return;
+      }
+      if (!video.paused) return;
+      // Manche Browser (v. a. iOS Safari) brauchen das muted-Property zusätzlich zum Attribut.
+      video.muted = true;
+      video.play().catch(() => {
+        // Wiedergabe blockiert (z. B. Stromsparmodus): Vorschaubild bzw. letzter Frame bleibt stehen.
+      });
+    };
+
+    // Der Observer meldet sich nur beim Über- bzw. Unterschreiten der Grenze, nicht bei jedem
+    // Scroll-Pixel. Der negative obere rootMargin zählt den Hero erst dann als „nicht mehr sichtbar“,
+    // wenn höchstens noch ein schmaler Streifen (20 % der Viewport-Höhe) oben hervorschaut.
+    const observer =
+      'IntersectionObserver' in window
+        ? new IntersectionObserver(
+            ([entry]) => {
+              heroInView = entry.isIntersecting;
+              sync();
+            },
+            { rootMargin: '-20% 0px 0px 0px', threshold: 0 },
+          )
+        : null;
+    observer?.observe(hero);
+
+    video.addEventListener('playing', markPlaying, { signal });
+    document.addEventListener('visibilitychange', sync, { signal });
+    reducedMotion.addEventListener('change', sync, { signal });
+    // Endgültiges Verlassen der Seite: Observer und Listener aufräumen. Bleibt die Seite im
+    // Back-/Forward-Cache (persisted), bleibt alles aktiv, damit das Video beim Zurückkehren weiterläuft.
+    window.addEventListener(
+      'pagehide',
+      (event) => {
+        if (event.persisted) return;
+        observer?.disconnect();
+        abort.abort();
+      },
+      { signal },
+    );
+
+    if (!video.paused && video.readyState > 2) markPlaying();
+    sync();
+  }
+</script>

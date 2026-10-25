@@ -1,78 +1,112 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
-import SectionHeading from '../components/SectionHeading.astro';
 import PortableTextContent from '../components/PortableTextContent.astro';
-import PlaceholderImage from '../components/PlaceholderImage.astro';
-import CtaButton from '../components/CtaButton.astro';
+import PageHero from '../components/PageHero.astro';
+import TopicSection from '../components/TopicSection.astro';
+import FadeUp from '../components/FadeUp.astro';
+import ContactPanel from '../components/ContactPanel.astro';
 import { urlFor } from '../lib/sanity/image';
-import { getTopicPage } from '../lib/sanity/api';
+import { getSettings, getTopicPage } from '../lib/sanity/api';
 
 const page = await getTopicPage('topicPage-unterstuetzung');
+const settings = await getSettings();
 
-const heading = page?.heading || 'Unterstützung erleben';
-const intro =
-  page?.intro ||
-  'Ob in schwierigen Lebensphasen, bei Fragen oder im persönlichen Gespräch – wir hören zu und begleiten dich gerne mit Rat, Gebet und einem offenen Ohr.';
-const primaryButton = page?.primaryButton || { label: 'Kontakt aufnehmen', url: '/kontakt' };
-const secondaryButton = page?.secondaryButton || { label: 'Unsere Ansprechpartner', url: '/ueber-uns' };
-const highlights = page?.highlights ?? [];
+// Alle redaktionellen Inhalte kommen ausschließlich aus Sanity (Dokument „topicPage-unterstuetzung“,
+// neuer Seitenaufbau). Leere optionale Felder blenden den jeweiligen Teil aus; es gibt keine
+// Ersatztexte im Code. Die bisherigen Felder (eyebrow, intro, Buttons, Kurzpunkte) werden nicht mehr gezeigt.
+const text = (value: string | undefined) => value?.trim() || undefined;
 
-const hasImage = Boolean(page?.image?.asset);
-const imageUrl = hasImage ? urlFor(page!.image!).width(1600).quality(85).auto('format').url() : null;
+// 1. Titelbild
+const heroImage = page?.heroImage?.asset ? page.heroImage : undefined;
+const heroVideo = page?.heroBackgroundType === 'video' && heroImage ? page?.heroVideo?.asset : undefined;
+const heroEyebrow = text(page?.heroEyebrow);
+// Einzige technische Absicherung: Die Seite braucht immer eine H1 und einen Seitentitel.
+const heroHeading = text(page?.heroHeading) ?? text(page?.heading) ?? 'Unterstützung erleben';
+const heroText = text(page?.heroText);
+
+// 2. Einleitung
+const introHeading = text(page?.introHeading);
+const introText = page?.introText?.length ? page.introText : undefined;
+
+// 3. Themenbereiche – Reihenfolge wie im CMS sortiert. Hintergründe wechseln zurückhaltend zwischen
+// Warmweiß, hellem Beige und Sand; „Automatisch“ setzt die Bilder abwechselnd rechts und links.
+const sections = page?.sections?.filter((section) => section.heading?.trim()) ?? [];
+const SECTION_BACKGROUNDS = ['bg-paper-muted', 'bg-paper', 'bg-sand-100/45', 'bg-paper'];
+const sectionBackground = (index: number) => SECTION_BACKGROUNDS[index % SECTION_BACKGROUNDS.length];
+// Folgt der Kontaktbereich auf einen warmweißen Abschnitt, genügt dessen unterer Abstand.
+const followsPlainSection = sections.length > 0 && sectionBackground(sections.length - 1) === 'bg-paper';
+
+// 5. SEO – eigene Canonical-URL über BaseLayout (sobald SITE_URL gesetzt ist).
+const seoTitle = text(page?.seo?.title);
+const seoDescription = text(page?.seo?.description) ?? heroText;
+const ogSource = page?.seoImage?.asset ? page.seoImage : heroImage;
+const ogImage = ogSource ? urlFor(ogSource).width(1200).height(630).fit('crop').auto('format').url() : undefined;
 ---
 
-<BaseLayout
-  title="Unterstützung erleben"
-  description="Unterstützung bei Ankerpunkt: Ansprechpartner, Gespräch und Begleitung, wenn du sie brauchst."
->
-  <section class="py-16 sm:py-20">
-    <Container>
-      <div class="overflow-hidden rounded-3xl">
-        {
-          imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={page?.image?.alt ?? ''}
-              class="h-auto w-full object-cover"
-              loading="eager"
-            />
-          ) : (
-            <PlaceholderImage class="aspect-[16/9] w-full" label="Unterstützung bei Ankerpunkt" />
-          )
-        }
-      </div>
+<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage)} footerBorder={false}>
+  <FadeUp slot="head" />
 
-      <div class="mx-auto mt-12 max-w-2xl text-center">
-        <SectionHeading eyebrow={page?.eyebrow || 'Unterstützung erleben'} heading={heading} align="center" class="mx-auto" />
-        <p class="mt-6 text-pretty text-lg leading-relaxed text-ink-soft">{intro}</p>
-        <div class="mt-8 flex flex-wrap justify-center gap-4">
-          <CtaButton href={primaryButton.url}>{primaryButton.label}</CtaButton>
-          {secondaryButton && (
-            <CtaButton href={secondaryButton.url} variant="secondary">{secondaryButton.label}</CtaButton>
-          )}
-        </div>
-      </div>
+  {/* 1. Titelbild – sofort sichtbar, kein Scroll-Fade-up. */}
+  <PageHero
+    eyebrow={heroEyebrow}
+    heading={heroHeading}
+    text={heroText}
+    image={heroImage}
+    video={heroVideo}
+    position={page?.heroPosition}
+    overlay={page?.heroOverlay}
+  />
 
-      {page?.body && <PortableTextContent value={page.body} class="mx-auto mt-16 max-w-2xl" />}
-    </Container>
-  </section>
-
+  {/* 2. Einleitung */}
   {
-    highlights.length > 0 && (
-      <section class="bg-paper-muted py-16 sm:py-20">
+    (introHeading || introText) && (
+      <section class="py-20 sm:py-24 lg:py-28">
         <Container>
-          <SectionHeading eyebrow="Für dich da" heading="So erreichst du uns" align="center" class="mx-auto" />
-          <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {highlights.map((item) => (
-              <div class="rounded-2xl bg-white p-6 ring-1 ring-anchor-100">
-                <h3 class="font-display text-lg font-medium text-ink">{item.title}</h3>
-                {item.text && <p class="mt-2 text-sm leading-relaxed text-ink-soft">{item.text}</p>}
-              </div>
-            ))}
+          <div data-fade-up class="mx-auto max-w-2xl text-center">
+            {introHeading && (
+              <h2 class="text-balance font-display text-3xl leading-tight font-medium text-ink sm:text-4xl lg:text-[2.75rem]">
+                {introHeading}
+              </h2>
+            )}
+            {introText && (
+              <PortableTextContent
+                value={introText}
+                class:list={[
+                  'mx-auto text-pretty [&_p]:text-lg [&_p]:leading-relaxed sm:[&_p]:text-xl [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+                  introHeading && 'mt-6 sm:mt-8',
+                ]}
+              />
+            )}
           </div>
         </Container>
       </section>
     )
   }
+
+  {/* 3. Themenbereiche */}
+  {
+    sections.map((section, index) => (
+      <TopicSection
+        heading={section.heading}
+        body={section.body}
+        image={section.image?.asset ? section.image : undefined}
+        imageSide={section.imagePosition === 'left' || section.imagePosition === 'right' ? section.imagePosition : index % 2 === 0 ? 'right' : 'left'}
+        class={sectionBackground(index)}
+      />
+    ))
+  }
+
+  {/* 4. Kontakt – kompakte hellgrüne Fläche wie auf Startseite und Über-uns-Seite, ohne Formular. */}
+  <ContactPanel
+    heading={text(page?.contactHeading)}
+    text={page?.contactText?.length ? page.contactText : undefined}
+    person={page?.contactPerson?.name ? page.contactPerson : undefined}
+    personLabel={text(page?.contactPersonLabel)}
+    buttonLabel={text(page?.buttonText)}
+    fallbackLink={text(page?.buttonLink)}
+    siteEmail={settings?.email}
+    mailSubject={`Anfrage: ${heroHeading}`}
+    class:list={['pb-16 sm:pb-20', followsPlainSection ? 'pt-2' : 'pt-16 sm:pt-20']}
+  />
 </BaseLayout>

@@ -1,7 +1,7 @@
 ---
 interface Props {
   eyebrow?: string;
-  heading: string;
+  heading?: string;
   text?: string;
   align?: 'left' | 'center';
   class?: string;
@@ -20,6 +20,6 @@ const centered = align === 'center';
       </p>
     )
   }
-  <h2 class:list={[eyebrow && 'mt-3', 'text-balance font-display text-3xl font-medium text-ink sm:text-4xl']}>{heading}</h2>
-  {text && <p class="mt-4 text-pretty text-lg leading-relaxed text-ink-soft">{text}</p>}
+  {heading && <h2 class:list={[eyebrow && 'mt-3', 'text-balance font-display text-3xl font-medium text-ink sm:text-4xl']}>{heading}</h2>}
+  {text && <p class:list={[heading && 'mt-4', 'text-pretty text-lg leading-relaxed text-ink-soft']}>{text}</p>}
 </div>

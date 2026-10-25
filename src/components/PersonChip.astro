@@ -1,0 +1,54 @@
+---
+import { urlFor } from '../lib/sanity/image';
+import type { PersonSummary } from '../lib/sanity/types';
+
+// Kompakte Ansprechpartner-Karte (Foto oder Initialen, optionale Bezeichnung, Name, Funktion,
+// Telefon und – auf Wunsch – E-Mail aus dem Personen-Dokument).
+interface Props {
+  person: PersonSummary;
+  label?: string;
+  showEmail?: boolean;
+  class?: string;
+}
+
+const { person, label, showEmail = false, class: className } = Astro.props;
+
+const photoUrl = person.photo?.asset ? urlFor(person.photo).width(128).height(128).fit('crop').auto('format').url() : undefined;
+const initials = person.name
+  .split(' ')
+  .map((part) => part[0])
+  .slice(0, 2)
+  .join('');
+const email = showEmail ? person.email?.trim() : undefined;
+---
+
+<div class:list={['flex items-center gap-4 rounded-2xl bg-paper/80 py-3 pr-6 pl-3 text-left ring-1 ring-anchor-200/60', className]}>
+  {
+    photoUrl ? (
+      <img src={photoUrl} alt="" width="56" height="56" loading="lazy" class="h-14 w-14 shrink-0 rounded-full object-cover" />
+    ) : (
+      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-anchor-700 font-medium text-paper" aria-hidden="true">
+        {initials}
+      </span>
+    )
+  }
+  <div class="min-w-0">
+    {label && <p class="text-xs font-semibold tracking-wider text-anchor-700 uppercase">{label}</p>}
+    <p class:list={['font-display text-lg font-medium text-ink', label && 'mt-0.5']}>{person.name}</p>
+    {person.role && <p class="text-sm text-ink-soft">{person.role}</p>}
+    {
+      email && (
+        <a href={`mailto:${email}`} class="mt-0.5 block truncate text-sm text-anchor-700 hover:text-anchor-900">
+          {email}
+        </a>
+      )
+    }
+    {
+      person.phone && (
+        <a href={`tel:${person.phone.replace(/\s+/g, '')}`} class="mt-0.5 block text-sm text-anchor-700 hover:text-anchor-900">
+          {person.phone}
+        </a>
+      )
+    }
+  </div>
+</div>

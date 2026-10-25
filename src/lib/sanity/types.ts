@@ -319,17 +319,126 @@ export interface TopicPage {
   highlights?: TopicPageHighlight[];
   primaryButton?: CtaLink;
   secondaryButton?: CtaLink;
+  // Neuer Seitenaufbau (z. B. „Unterstützung erleben“)
+  heroEyebrow?: string;
+  heroHeading?: string;
+  heroText?: string;
+  heroBackgroundType?: HeroBackgroundType;
+  heroImage?: SanityImageData;
+  heroVideo?: SanityFileData;
+  heroPosition?: AboutHeroPosition;
+  heroOverlay?: AboutHeroOverlay;
+  introHeading?: string;
+  introText?: PortableTextValue;
+  sections?: TopicSectionData[];
+  // „Glauben entdecken“
+  faithHeading?: string;
+  faithIntro?: string;
+  serviceHeading?: string;
+  serviceText?: PortableTextValue;
+  serviceNote?: string;
+  serviceEvent?: { title?: string; slug?: string; isActive?: boolean };
+  serviceLinkText?: string;
+  serviceImage?: CaptionedImageData;
+  homeGroupHeading?: string;
+  homeGroupText?: PortableTextValue;
+  homeGroupNote?: string;
+  homeGroupContact?: PersonSummary;
+  homeGroupImage?: CaptionedImageData;
+  jesusHeading?: string;
+  jesusText?: PortableTextValue;
+  jesusButtonText?: string;
+  jesusButtonUrl?: string;
+  bookVisible?: boolean;
+  bookHeading?: string;
+  bookTitle?: string;
+  bookAuthor?: string;
+  bookText?: PortableTextValue;
+  bookCover?: SanityImageData;
+  bookPdfUrl?: string;
+  bookButtonText?: string;
+  contactHeading?: string;
+  contactText?: PortableTextValue;
+  contactPerson?: PersonSummary;
+  contactPersonLabel?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  seo?: SeoData;
+  seoImage?: SanityImageData;
+}
+
+export interface TopicSectionData {
+  _key: string;
+  heading: string;
+  body?: PortableTextValue;
+  image?: CaptionedImageData;
+  imagePosition?: 'auto' | 'left' | 'right';
+}
+
+export type AboutHeroOverlay = 'light' | 'medium' | 'strong';
+export type AboutHeroPosition = 'auto' | HeroBackgroundPosition;
+export type CoreValueIcon = 'cross' | 'heart' | 'community' | 'path' | 'place' | 'none';
+
+export interface CaptionedImageData extends SanityImageData {
+  caption?: string;
+}
+
+export interface CoreValue {
+  _key: string;
+  title: string;
+  text?: string;
+  icon?: CoreValueIcon;
+  image?: SanityImageData;
+}
+
+export interface CreedItem {
+  _key: string;
+  title: string;
+  body?: PortableTextValue;
+  bibleVerses?: string[];
+}
+
+export interface FreeChurchPrinciple {
+  _key: string;
+  title: string;
+  text?: string;
 }
 
 export interface AboutPage {
-  eyebrow?: string;
-  heading?: string;
-  groupPhoto?: SanityImageData;
-  intro?: PortableTextValue;
-  buttonText?: string;
-  buttonLink?: string;
+  heroEyebrow?: string;
+  heroHeading?: string;
+  heroText?: string;
+  heroBackgroundType?: HeroBackgroundType;
+  heroImage?: SanityImageData;
+  heroVideo?: SanityFileData;
+  heroPosition?: AboutHeroPosition;
+  heroOverlay?: AboutHeroOverlay;
+  whoHeading?: string;
+  whoLead?: string;
+  whoText?: PortableTextValue;
+  groupPhoto?: CaptionedImageData;
+  valuesHeading?: string;
+  valuesText?: string;
+  coreValues?: CoreValue[];
+  creedHeading?: string;
+  creedText?: string;
+  creedItems?: CreedItem[];
+  creedSourceText?: string;
+  creedSourceUrl?: string;
+  freeChurchHeading?: string;
+  freeChurchIntro?: string;
+  freeChurchPrinciples?: FreeChurchPrinciple[];
+  freeChurchText?: PortableTextValue;
+  freeChurchClosing?: string;
+  freeChurchImage?: CaptionedImageData;
   peopleHeading?: string;
   people?: PersonSummary[];
+  contactHeading?: string;
+  contactText?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  seo?: SeoData;
+  seoImage?: SanityImageData;
 }
 
 export interface Settings {

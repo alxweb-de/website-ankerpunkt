@@ -1,0 +1,66 @@
+---
+// Wiederverwendbares Fade-up beim Scrollen. Einbinden im <head> der Seite:
+//   <FadeUp slot="head" />
+// und an jedes Element, das erscheinen soll, `data-fade-up` setzen – optional mit Verzögerung
+// (z. B. für ein Bild neben dem Text): style="--fade-up-delay: 100ms".
+// Gestaltung und reduzierte Bewegung: siehe global.css (.fade-up-ready).
+---
+
+{/* Läuft im <head> vor dem ersten Zeichnen: Nur wenn Fade-up wirklich möglich ist, werden die Elemente
+    überhaupt erst versteckt – kein Aufblitzen. Startet das eigentliche Skript nicht (Fehler, Netzwerk),
+    hebt die Notbremse das Verstecken nach kurzer Zeit wieder auf, damit nichts unsichtbar bleibt. */}
+<script is:inline>
+  (function () {
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var root = document.documentElement;
+    root.classList.add('fade-up-ready');
+    setTimeout(function () {
+      if (!window.__fadeUpStarted) root.classList.remove('fade-up-ready');
+    }, 3000);
+  })();
+</script>
+
+<script>
+  declare global {
+    interface Window {
+      __fadeUpStarted?: boolean;
+    }
+  }
+
+  const root = document.documentElement;
+  if (root.classList.contains('fade-up-ready')) {
+    window.__fadeUpStarted = true;
+    const show = (element: Element) => element.classList.add('is-faded-in');
+
+    // Jedes Element wird genau einmal eingeblendet und danach nicht mehr beobachtet – erneutes Hoch-
+    // und Runterscrollen startet die Animation also nicht neu. Kein Scroll-Listener nötig.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          // Auch Elemente, die bereits oberhalb des sichtbaren Bereichs liegen (z. B. nach einem
+          // Sprung per Anker oder beim Neuladen weiter unten), sofort zeigen.
+          if (entry.isIntersecting || entry.boundingClientRect.bottom < 0) {
+            show(entry.target);
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0 },
+    );
+
+    document.querySelectorAll('[data-fade-up]').forEach((element) => observer.observe(element));
+
+    // Wechselt die Einstellung „Bewegung reduzieren“ während des Besuchs, sofort alles zeigen.
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener(
+      'change',
+      (event) => {
+        if (!event.matches) return;
+        observer.disconnect();
+        document.querySelectorAll('[data-fade-up]').forEach(show);
+      },
+      { once: true },
+    );
+  }
+
+  export {};
+</script>

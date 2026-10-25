@@ -1,0 +1,39 @@
+---
+import { urlFor } from '../lib/sanity/image';
+import type { CaptionedImageData } from '../lib/sanity/types';
+
+// Inhaltsbild aus Sanity im gewählten Zuschnitt (Seitenverhältnis bleibt erhalten), responsiv per
+// srcset. Breite/Höhe stammen aus den Bildmaßen, damit beim Laden nichts verspringt.
+interface Props {
+  image: CaptionedImageData;
+  sizes: string;
+  class?: string;
+}
+
+const { image, sizes, class: className = '' } = Astro.props;
+
+const WIDTHS = [480, 720, 960, 1280, 1600];
+const dims = image.asset?.metadata?.dimensions;
+const crop = image.crop ?? { top: 0, bottom: 0, left: 0, right: 0 };
+const width = dims ? Math.round(dims.width * (1 - crop.left - crop.right)) : undefined;
+const height = dims ? Math.round(dims.height * (1 - crop.top - crop.bottom)) : undefined;
+const src = urlFor(image).width(1280).fit('max').auto('format').quality(82).url();
+const srcset = WIDTHS.filter((w) => !width || w <= width * 1.2)
+  .map((w) => `${urlFor(image).width(w).fit('max').auto('format').quality(w <= 720 ? 78 : 82).url()} ${w}w`)
+  .join(', ');
+---
+
+<figure class:list={['m-0', className]}>
+  <img
+    src={src}
+    srcset={srcset || undefined}
+    sizes={sizes}
+    width={width}
+    height={height}
+    alt={image.alt ?? ''}
+    loading="lazy"
+    decoding="async"
+    class="h-auto w-full rounded-3xl bg-paper-muted"
+  />
+  {image.caption && <figcaption class="mt-3 text-center text-sm text-ink-soft">{image.caption}</figcaption>}
+</figure>

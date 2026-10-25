@@ -106,6 +106,82 @@
     min-height: 100svh;
   }
 
+  /* Titelbild der Unterseiten (z. B. Über uns): ca. 60 % der Höhe auf Smartphones, 70–75 % ab Tablet.
+     Im Querformat auf Smartphones bestimmt allein der Inhalt (plus Header-Abstand) die Höhe. */
+  .min-h-subhero {
+    min-height: 60vh;
+    min-height: 60svh;
+  }
+  @media (min-width: 640px) {
+    .min-h-subhero {
+      min-height: 68vh;
+      min-height: 68svh;
+    }
+  }
+  @media (min-width: 1024px) {
+    .min-h-subhero {
+      min-height: 72vh;
+      min-height: 72svh;
+    }
+  }
+  @media (orientation: landscape) and (max-height: 540px) {
+    .min-h-subhero {
+      min-height: 0;
+    }
+  }
+
+  /* Aufklappliste (details/summary): ruhiges Auf- und Zuklappen, wo der Browser die Höhe von
+     „auto“ animieren kann (interpolate-size, ::details-content). Ältere Browser klappen ohne
+     Animation auf – Bedienung und Inhalt bleiben identisch. */
+  .accordion-item {
+    interpolate-size: allow-keywords;
+  }
+  .accordion-item > summary {
+    list-style: none;
+  }
+  .accordion-item > summary::-webkit-details-marker {
+    display: none;
+  }
+  .accordion-item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.35s ease,
+      content-visibility 0.35s allow-discrete;
+  }
+  .accordion-item[open]::details-content {
+    block-size: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .accordion-item::details-content {
+      transition: none;
+    }
+  }
+
+  /* Fade-up beim Scrollen (siehe components/FadeUp.astro): Elemente mit data-fade-up erscheinen einmalig
+     leicht von unten. Versteckt werden sie nur, solange <html> die Klasse „fade-up-ready“ trägt – die setzt
+     erst das Skript, und nur ohne reduzierte Bewegung. Ohne JavaScript bleibt alles sofort sichtbar.
+     Nur opacity und transform: kein Einfluss auf das Layout. */
+  .fade-up-ready [data-fade-up]:not(.is-faded-in) {
+    opacity: 0;
+    transform: translate3d(0, 25px, 0);
+  }
+  .fade-up-ready [data-fade-up] {
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition-delay: var(--fade-up-delay, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fade-up-ready [data-fade-up]:not(.is-faded-in) {
+      opacity: 1;
+      transform: none;
+    }
+    .fade-up-ready [data-fade-up] {
+      transition: none;
+    }
+  }
+
   .card-shell {
     background-color: white;
     border-radius: var(--radius-2xl);

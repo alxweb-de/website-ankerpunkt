@@ -1,0 +1,115 @@
+---
+import Container from './Container.astro';
+import HeroMedia from './HeroMedia.astro';
+import type { SanityFileData, SanityImageData } from '../lib/sanity/types';
+
+// Titelbild der Unterseiten (Über uns, Themenseiten): Bild oder Video mit Abdunklung, darüber
+// Dachzeile, H1 und Beschreibung. Mit Bild liegt der transparente Header darüber (die Seite setzt
+// dafür `transparentHeader`); ohne Bild erscheint ein ruhiger, heller Titelbereich.
+interface Props {
+  eyebrow?: string;
+  heading: string;
+  text?: string;
+  image?: SanityImageData;
+  /** Nur mit Bild: Das Bild ist Vorschau- und Ersatzbild des Videos. */
+  video?: SanityFileData['asset'];
+  /** „auto“ richtet den Ausschnitt am Hotspot aus, sonst eine CSS object-position. */
+  position?: string;
+  overlay?: 'light' | 'medium' | 'strong';
+}
+
+const { eyebrow, heading, text, image, video, position = 'auto', overlay = 'medium' } = Astro.props;
+
+/** „Automatisch“ richtet den Ausschnitt am Hotspot aus (umgerechnet auf einen evtl. Zuschnitt). */
+function heroObjectPosition(image: SanityImageData, position: string) {
+  if (position !== 'auto') return position;
+  const { hotspot, crop } = image;
+  if (!hotspot) return 'center center';
+  const c = crop ?? { top: 0, bottom: 0, left: 0, right: 0 };
+  const x = (hotspot.x - c.left) / Math.max(1 - c.left - c.right, 0.01);
+  const y = (hotspot.y - c.top) / Math.max(1 - c.top - c.bottom, 0.01);
+  const pct = (v: number) => `${Math.round(Math.min(Math.max(v, 0), 1) * 100)}%`;
+  return `${pct(x)} ${pct(y)}`;
+}
+const objectPosition = image ? heroObjectPosition(image, position) : 'center center';
+
+const HERO_OVERLAY_OPACITY = { light: 0.22, medium: 0.36, strong: 0.5 } as const;
+const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.medium;
+---
+
+<section class:list={['relative flex items-center overflow-hidden', image ? 'min-h-subhero' : 'bg-paper-muted']}>
+  {/* Marker für den Header (siehe Header.astro): transparent über dem Bild, beim Scrollen eingefärbt. */}
+  {image && <div id="hero-scroll-sentinel" class="pointer-events-none absolute top-0 left-0 h-6 w-px" aria-hidden="true" />}
+
+  <div class="absolute inset-0 z-0">
+    {
+      image ? (
+        <>
+          <HeroMedia image={image} alt={image.alt ?? ''} position={objectPosition} video={video} />
+          {/* Verlauf hinter dem transparenten Header, damit Logo und Navigation lesbar bleiben. */}
+          <div
+            class="absolute inset-x-0 top-0 h-28 sm:h-32"
+            style="background: linear-gradient(to bottom, rgba(36,26,16,0.55) 0%, rgba(36,26,16,0.22) 60%, rgba(36,26,16,0) 100%);"
+          />
+          {/* Abdunklung (im CMS wählbar) plus ein weicher Schatten hinter dem Text. */}
+          <div class="absolute inset-0 bg-[#241a10]" style={`opacity: ${overlayOpacity};`} />
+          <div
+            class="absolute inset-0"
+            style="background: radial-gradient(ellipse 60% 55% at 50% 52%, rgba(42,30,18,0.32) 0%, rgba(42,30,18,0) 75%);"
+          />
+        </>
+      ) : (
+        <>
+          <div class="bg-dot-grid pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_0%,black,transparent)]" />
+          <div class="pointer-events-none absolute -top-32 -right-32 h-96 w-96 rounded-full bg-sand-200/40 blur-3xl" />
+          <div class="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-anchor-100/60 blur-3xl" />
+        </>
+      )
+    }
+  </div>
+
+  <Container
+    class:list={[
+      'relative z-10 text-center',
+      image
+        ? 'pt-[calc(5.5rem+env(safe-area-inset-top,0px))] pb-16 sm:pt-32 sm:pb-20 landscape-short:pt-[calc(5rem+env(safe-area-inset-top,0px))] landscape-short:pb-10'
+        : 'py-20 sm:py-28',
+    ]}
+  >
+    <div class="motion-safe:animate-fade-up mx-auto max-w-3xl">
+      {
+        eyebrow && (
+          <p
+            class:list={[
+              'mb-4 text-sm font-semibold tracking-[0.16em] uppercase sm:mb-5 sm:text-base landscape-short:mb-3',
+              image ? 'text-paper/85 [text-shadow:0_1px_8px_rgba(20,14,8,0.35)]' : 'text-anchor-600',
+            ]}
+          >
+            {eyebrow}
+          </p>
+        )
+      }
+      <h1
+        class:list={[
+          'text-balance font-display text-5xl leading-[1.1] font-medium tracking-[-0.01em] sm:text-6xl lg:text-7xl',
+          'landscape-short:text-5xl',
+          image ? 'text-paper [text-shadow:0_2px_22px_rgba(20,14,8,0.42)]' : 'text-ink',
+        ]}
+      >
+        {heading}
+      </h1>
+      {
+        text && (
+          <p
+            class:list={[
+              'mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed sm:mt-8 sm:text-xl landscape-short:mt-4 landscape-short:text-base',
+              image ? 'text-paper/90 [text-shadow:0_1px_10px_rgba(20,14,8,0.35)]' : 'text-ink-soft',
+            ]}
+          >
+            {text}
+          </p>
+        )
+      }
+    </div>
+  </Container>
+</section>

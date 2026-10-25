@@ -1,0 +1,67 @@
+---
+import Container from './Container.astro';
+import CtaButton from './CtaButton.astro';
+import PersonChip from './PersonChip.astro';
+import PortableTextContent from './PortableTextContent.astro';
+import { buildContactMailto } from '../lib/contact';
+import type { PersonSummary, PortableTextValue } from '../lib/sanity/types';
+
+// Kompakter Kontaktbereich der Themenseiten: hellgrüne Fläche mit Überschrift, Text, Ansprechpartner
+// und dunkelgrünem Button – ohne Formular. Der Button öffnet eine E-Mail an den Ansprechpartner, sonst
+// an die Kontakt-E-Mail aus den Globalen Einstellungen. Ohne gültige Adresse kein mailto:, sondern der
+// Ersatz-Link aus dem CMS (leer: kein Button). Ohne Inhalte wird nichts ausgegeben.
+interface Props {
+  heading?: string;
+  text?: PortableTextValue;
+  person?: PersonSummary;
+  personLabel?: string;
+  buttonLabel?: string;
+  /** Ersatz-Link ohne gültige E-Mail-Adresse (z. B. „/kontakt“). */
+  fallbackLink?: string;
+  /** Kontakt-E-Mail aus den Globalen Einstellungen. */
+  siteEmail?: string;
+  mailSubject: string;
+  /** Abstände des umgebenden Abschnitts (abhängig vom vorherigen Abschnitt). */
+  class?: string;
+}
+
+const { heading, text, person, personLabel, buttonLabel, fallbackLink, siteEmail, mailSubject, class: className } = Astro.props;
+
+const href = buildContactMailto(person?.email, mailSubject) ?? buildContactMailto(siteEmail, mailSubject) ?? fallbackLink;
+const showButton = Boolean(buttonLabel && href);
+const hasContent = Boolean(heading || text || person || showButton);
+---
+
+{
+  hasContent && (
+    <section class={className}>
+      <Container>
+        <div data-fade-up class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-10 text-center sm:px-12 sm:py-12 lg:px-16">
+          {heading && <h2 class="max-w-2xl text-balance font-display text-3xl font-medium text-ink sm:text-4xl">{heading}</h2>}
+          {text && (
+            <div class:list={['max-w-2xl', heading && 'mt-4']}>
+              <PortableTextContent
+                value={text}
+                class="text-pretty [&_p]:text-lg [&_p]:leading-relaxed [&_p]:text-ink-soft [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p+p]:mt-3"
+              />
+            </div>
+          )}
+
+          {person && <PersonChip person={person} label={personLabel} class={heading || text ? 'mt-8' : undefined} />}
+
+          {showButton && (
+            <div class:list={[(heading || text || person) && 'mt-8']}>
+              <CtaButton
+                href={href!}
+                size="lg"
+                class="shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow-[0_10px_24px_-10px_rgba(21,48,46,0.6)]"
+              >
+                {buttonLabel}
+              </CtaButton>
+            </div>
+          )}
+        </div>
+      </Container>
+    </section>
+  )
+}

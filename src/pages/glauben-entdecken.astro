@@ -1,78 +1,271 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
-import SectionHeading from '../components/SectionHeading.astro';
 import PortableTextContent from '../components/PortableTextContent.astro';
-import PlaceholderImage from '../components/PlaceholderImage.astro';
 import CtaButton from '../components/CtaButton.astro';
+import PageHero from '../components/PageHero.astro';
+import TopicSection from '../components/TopicSection.astro';
+import PersonChip from '../components/PersonChip.astro';
+import ContactPanel from '../components/ContactPanel.astro';
+import FadeUp from '../components/FadeUp.astro';
 import { urlFor } from '../lib/sanity/image';
-import { getTopicPage } from '../lib/sanity/api';
+import { getSettings, getTopicPage } from '../lib/sanity/api';
+import type { PortableTextValue, SanityImageData } from '../lib/sanity/types';
 
 const page = await getTopicPage('topicPage-glauben');
+const settings = await getSettings();
 
-const heading = page?.heading || 'Glauben entdecken';
-const intro =
-  page?.intro ||
-  'Wer ist Jesus, und was hat er mit meinem Leben zu tun? Bei uns darfst du Fragen stellen, Antworten suchen und deinen eigenen Weg im Glauben finden.';
-const primaryButton = page?.primaryButton || { label: 'Mehr über uns erfahren', url: '/ueber-uns' };
-const secondaryButton = page?.secondaryButton || { label: 'Zum Gottesdienst', url: '/veranstaltungen' };
-const highlights = page?.highlights ?? [];
+// Alle redaktionellen Inhalte kommen ausschließlich aus Sanity (Dokument „topicPage-glauben“, neuer
+// Seitenaufbau). Leere optionale Felder blenden den jeweiligen Teil aus; es gibt keine Ersatztexte im
+// Code. Die bisherigen Felder (eyebrow, intro, Buttons, Kurzpunkte) werden nicht mehr gezeigt.
+const text = (value: string | undefined) => value?.trim() || undefined;
+const richText = (value: PortableTextValue | undefined) => (value?.length ? value : undefined);
+const withAsset = <T extends SanityImageData>(image: T | undefined) => (image?.asset ? image : undefined);
 
-const hasImage = Boolean(page?.image?.asset);
-const imageUrl = hasImage ? urlFor(page!.image!).width(1600).quality(85).auto('format').url() : null;
+// 1. Titelbild
+const heroImage = withAsset(page?.heroImage);
+const heroVideo = page?.heroBackgroundType === 'video' && heroImage ? page?.heroVideo?.asset : undefined;
+// Einzige technische Absicherung: Die Seite braucht immer eine H1 und einen Seitentitel.
+const heroHeading = text(page?.heroHeading) ?? text(page?.heading) ?? 'Glauben entdecken';
+const heroText = text(page?.heroText);
+
+// 2. Gemeinsam Glauben erleben: Gottesdienst und Bibel-Hauskreise als Unterbereiche (h3).
+const faithHeading = text(page?.faithHeading);
+const faithIntro = text(page?.faithIntro);
+const serviceHeading = text(page?.serviceHeading);
+const serviceNote = text(page?.serviceNote);
+// Link zur Detailseite nur, wenn der Gottesdienst als aktive regelmäßige Veranstaltung existiert.
+const serviceEvent = page?.serviceEvent?.isActive && page.serviceEvent.slug ? page.serviceEvent : undefined;
+const serviceLinkText = serviceEvent ? text(page?.serviceLinkText) : undefined;
+const homeGroupHeading = text(page?.homeGroupHeading);
+const homeGroupNote = text(page?.homeGroupNote);
+const homeGroupContact = page?.homeGroupContact?.name ? page.homeGroupContact : undefined;
+const hasFaith = Boolean(faithHeading || faithIntro || serviceHeading || homeGroupHeading);
+
+// 3. Mehr über Jesus erfahren – externe Webseite in neuem Tab.
+const jesusHeading = text(page?.jesusHeading);
+const jesusText = richText(page?.jesusText);
+const jesusButtonText = text(page?.jesusButtonText);
+const jesusButtonUrl = text(page?.jesusButtonUrl);
+const hasJesus = Boolean(jesusHeading || jesusText || (jesusButtonText && jesusButtonUrl));
+
+// 4. Buchempfehlung – im CMS komplett ausblendbar. Cover unbeschnitten im natürlichen Hochformat.
+const bookCover = withAsset(page?.bookCover);
+const bookHeading = text(page?.bookHeading);
+const bookTitle = text(page?.bookTitle);
+const bookAuthor = text(page?.bookAuthor);
+const bookText = richText(page?.bookText);
+const bookPdfUrl = text(page?.bookPdfUrl);
+const bookButtonText = text(page?.bookButtonText);
+const hasBook = page?.bookVisible !== false && Boolean(bookTitle || bookText || bookCover);
+const coverDims = bookCover?.asset?.metadata?.dimensions;
+const COVER_WIDTHS = [320, 480, 640, 800];
+const coverSrcset = bookCover
+  ? COVER_WIDTHS.map((w) => `${urlFor(bookCover).width(w).fit('max').auto('format').url()} ${w}w`).join(', ')
+  : undefined;
+
+// 5. SEO – eigene Canonical-URL über BaseLayout (sobald SITE_URL gesetzt ist).
+const seoTitle = text(page?.seo?.title);
+const seoDescription = text(page?.seo?.description) ?? heroText;
+const ogSource = withAsset(page?.seoImage) ?? heroImage;
+const ogImage = ogSource ? urlFor(ogSource).width(1200).height(630).fit('crop').auto('format').url() : undefined;
+
+const BODY_TEXT = 'text-pretty [&_p]:text-lg [&_p]:leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0';
 ---
 
-<BaseLayout
-  title="Glauben entdecken"
-  description="Glauben entdecken bei Ankerpunkt: Fragen stellen, Antworten suchen, Jesus kennenlernen."
->
-  <section class="py-16 sm:py-20">
-    <Container>
-      <div class="overflow-hidden rounded-3xl">
-        {
-          imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={page?.image?.alt ?? ''}
-              class="h-auto w-full object-cover"
-              loading="eager"
-            />
-          ) : (
-            <PlaceholderImage class="aspect-[16/9] w-full" label="Glauben entdecken bei Ankerpunkt" />
-          )
-        }
-      </div>
+<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage)} footerBorder={false}>
+  <FadeUp slot="head" />
 
-      <div class="mx-auto mt-12 max-w-2xl text-center">
-        <SectionHeading eyebrow={page?.eyebrow || 'Glauben entdecken'} heading={heading} align="center" class="mx-auto" />
-        <p class="mt-6 text-pretty text-lg leading-relaxed text-ink-soft">{intro}</p>
-        <div class="mt-8 flex flex-wrap justify-center gap-4">
-          <CtaButton href={primaryButton.url}>{primaryButton.label}</CtaButton>
-          {secondaryButton && (
-            <CtaButton href={secondaryButton.url} variant="secondary">{secondaryButton.label}</CtaButton>
-          )}
-        </div>
-      </div>
+  {/* 1. Titelbild – sofort sichtbar, kein Scroll-Fade-up. */}
+  <PageHero
+    eyebrow={text(page?.heroEyebrow)}
+    heading={heroHeading}
+    text={heroText}
+    image={heroImage}
+    video={heroVideo}
+    position={page?.heroPosition}
+    overlay={page?.heroOverlay}
+  />
 
-      {page?.body && <PortableTextContent value={page.body} class="mx-auto mt-16 max-w-2xl" />}
-    </Container>
-  </section>
-
+  {/* 2. Gemeinsam Glauben erleben – Farbfolge wie auf „Unterstützung erleben“: Einleitung warmweiß,
+      Gottesdienst hellbeige, Bibel-Hauskreise warmweiß. */}
   {
-    highlights.length > 0 && (
-      <section class="bg-paper-muted py-16 sm:py-20">
-        <Container>
-          <SectionHeading eyebrow="Erste Schritte" heading="So kannst du Glauben entdecken" align="center" class="mx-auto" />
-          <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {highlights.map((item) => (
-              <div class="rounded-2xl bg-white p-6 ring-1 ring-anchor-100">
-                <h3 class="font-display text-lg font-medium text-ink">{item.title}</h3>
-                {item.text && <p class="mt-2 text-sm leading-relaxed text-ink-soft">{item.text}</p>}
+    hasFaith && (
+      <>
+        {(faithHeading || faithIntro) && (
+          <section class="py-20 sm:py-24 lg:py-28">
+            <Container>
+              <div data-fade-up class="mx-auto max-w-2xl text-center">
+                {faithHeading && (
+                  <h2 class="text-balance font-display text-3xl leading-tight font-medium text-ink sm:text-4xl lg:text-[2.75rem]">{faithHeading}</h2>
+                )}
+                {faithIntro && (
+                  <p class:list={['text-pretty text-lg leading-relaxed text-ink-soft sm:text-xl', faithHeading && 'mt-6 sm:mt-8']}>{faithIntro}</p>
+                )}
               </div>
-            ))}
+            </Container>
+          </section>
+        )}
+
+        {serviceHeading && (
+          <TopicSection
+            heading={serviceHeading}
+            body={richText(page?.serviceText)}
+            image={withAsset(page?.serviceImage)}
+            imageSide="right"
+            headingLevel={3}
+            bodyAlign="left"
+            class="bg-paper-muted"
+          >
+            {(serviceNote || serviceLinkText) && (
+              <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+                {serviceNote && (
+                  <p class="inline-flex items-center gap-2.5 rounded-full bg-paper px-5 py-2.5 font-medium text-anchor-800 ring-1 ring-anchor-100">
+                    <svg viewBox="0 0 20 20" fill="none" class="h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
+                      <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5" />
+                      <path d="M10 6v4.25l2.75 1.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    {serviceNote}
+                  </p>
+                )}
+                {serviceLinkText && (
+                  <a
+                    href={`/regelmaessige-veranstaltungen/${serviceEvent!.slug}`}
+                    class="inline-flex items-center gap-1.5 font-medium text-anchor-700 underline decoration-anchor-200 underline-offset-4 hover:text-anchor-900 hover:decoration-anchor-500"
+                  >
+                    {serviceLinkText}
+                    <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            )}
+          </TopicSection>
+        )}
+
+        {homeGroupHeading && (
+          <TopicSection
+            heading={homeGroupHeading}
+            body={richText(page?.homeGroupText)}
+            image={withAsset(page?.homeGroupImage)}
+            imageSide="left"
+            headingLevel={3}
+            bodyAlign="left"
+            class="bg-paper"
+          >
+            {(homeGroupNote || homeGroupContact) && (
+              <div>
+                {homeGroupNote && <p class="text-lg leading-relaxed font-medium text-anchor-800">{homeGroupNote}</p>}
+                {homeGroupContact && (
+                  <div class:list={['inline-block max-w-full', homeGroupNote && 'mt-4']}>
+                    <PersonChip person={homeGroupContact} showEmail />
+                  </div>
+                )}
+              </div>
+            )}
+          </TopicSection>
+        )}
+      </>
+    )
+  }
+
+  {/* 3. Mehr über Jesus erfahren – warmer Sandton, Button zur externen Einführung. */}
+  {
+    hasJesus && (
+      <section class="bg-sand-100/45 py-20 sm:py-24 lg:py-28">
+        <Container>
+          <div data-fade-up class="mx-auto max-w-2xl text-center">
+            {jesusHeading && (
+              <h2 class="text-balance font-display text-3xl leading-tight font-medium text-ink sm:text-4xl lg:text-[2.75rem]">{jesusHeading}</h2>
+            )}
+            {jesusText && <PortableTextContent value={jesusText} class:list={['mx-auto', BODY_TEXT, jesusHeading && 'mt-6 sm:mt-8']} />}
+            {jesusButtonText && jesusButtonUrl && (
+              <div class:list={[(jesusHeading || jesusText) && 'mt-9']}>
+                <CtaButton
+                  href={jesusButtonUrl}
+                  size="lg"
+                  class="shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow-[0_10px_24px_-10px_rgba(21,48,46,0.6)]"
+                >
+                  {jesusButtonText}
+                  <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+                    <path d="M6 3h7v7M13 3 5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span class="sr-only">(öffnet in neuem Tab)</span>
+                </CtaButton>
+              </div>
+            )}
           </div>
         </Container>
       </section>
     )
   }
+
+  {/* 4. Buchempfehlung – Cover links, Text rechts (Smartphone: Cover oben). */}
+  {
+    hasBook && (
+      <section class="bg-anchor-50 py-20 sm:py-24 lg:py-28">
+        <Container>
+          <div
+            class:list={[
+              bookCover
+                ? 'mx-auto grid max-w-5xl items-center gap-10 sm:gap-12 md:grid-cols-[minmax(0,16rem)_1fr] lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16'
+                : 'mx-auto max-w-2xl',
+            ]}
+          >
+            {bookCover && (
+              <div data-fade-up class="mx-auto w-full max-w-[13rem] sm:max-w-[15rem] md:max-w-none">
+                <img
+                  src={urlFor(bookCover).width(640).fit('max').auto('format').url()}
+                  srcset={coverSrcset}
+                  sizes="(min-width: 1024px) 320px, (min-width: 768px) 256px, 240px"
+                  width={coverDims?.width}
+                  height={coverDims?.height}
+                  alt={bookCover.alt ?? ''}
+                  loading="lazy"
+                  decoding="async"
+                  class="h-auto w-full rounded-md bg-paper shadow-[0_24px_48px_-20px_rgba(21,48,46,0.45)] ring-1 ring-ink/5"
+                />
+              </div>
+            )}
+            <div data-fade-up style={bookCover ? '--fade-up-delay: 100ms' : undefined}>
+              {bookHeading && <p class="text-sm font-semibold tracking-[0.16em] text-anchor-600 uppercase">{bookHeading}</p>}
+              {bookTitle && (
+                <h2 class:list={['text-balance font-display text-3xl leading-tight font-medium text-ink sm:text-4xl', bookHeading && 'mt-3']}>
+                  {bookTitle}
+                </h2>
+              )}
+              {bookAuthor && <p class="mt-2 text-lg font-medium text-anchor-700">{bookAuthor}</p>}
+              {bookText && <PortableTextContent value={bookText} class:list={[BODY_TEXT, 'mt-6']} />}
+              {bookButtonText && bookPdfUrl && (
+                <div class="mt-8">
+                  <CtaButton href={bookPdfUrl} size="lg" class="shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)]">
+                    <svg viewBox="0 0 20 20" fill="none" class="h-5 w-5" aria-hidden="true">
+                      <path d="M5.5 2.75h6l3.75 3.75v10a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-13a.75.75 0 0 1 .75-.75Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                      <path d="M11.25 2.75V6.5h3.75M7.5 10.5h5M7.5 13.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                    {bookButtonText}
+                    <span class="sr-only">(öffnet in neuem Tab)</span>
+                  </CtaButton>
+                </div>
+              )}
+            </div>
+          </div>
+        </Container>
+      </section>
+    )
+  }
+
+  {/* 5. Kontakt – gleiche kompakte hellgrüne Fläche wie auf „Unterstützung erleben“. */}
+  <ContactPanel
+    heading={text(page?.contactHeading)}
+    text={richText(page?.contactText)}
+    person={page?.contactPerson?.name ? page.contactPerson : undefined}
+    personLabel={text(page?.contactPersonLabel)}
+    buttonLabel={text(page?.buttonText)}
+    fallbackLink={text(page?.buttonLink)}
+    siteEmail={settings?.email}
+    mailSubject={`Anfrage: ${heroHeading}`}
+    class="py-16 sm:py-20"
+  />
 </BaseLayout>

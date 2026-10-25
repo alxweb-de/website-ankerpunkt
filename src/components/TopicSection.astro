@@ -1,0 +1,83 @@
+---
+import Container from './Container.astro';
+import ContentImage from './ContentImage.astro';
+import PortableTextContent from './PortableTextContent.astro';
+import type { CaptionedImageData, PortableTextValue } from '../lib/sanity/types';
+
+// Themenbereich einer Themenseite: mit Bild als zweispaltiges Bild-Text-Layout (ab Desktop
+// nebeneinander, darunter einspaltig mit dem Bild nach dem Text), ohne Bild als zentrierter Abschnitt.
+// Text und Bild erscheinen per Fade-up (siehe FadeUp.astro) – das Bild leicht verzögert.
+// Zusätzliche Inhalte unter dem Text (Hinweise, Links, Ansprechpartner) über den Standard-Slot.
+interface Props {
+  heading: string;
+  body?: PortableTextValue;
+  image?: CaptionedImageData;
+  /** Seite des Bilds ab Desktop. */
+  imageSide?: 'left' | 'right';
+  /** h3 für Unterbereiche unter einer gemeinsamen Abschnittsüberschrift. */
+  headingLevel?: 2 | 3;
+  /** Ohne Bild: Fließtext zentriert oder (bei längeren Texten) linksbündig unter zentrierter Überschrift. */
+  bodyAlign?: 'center' | 'left';
+  class?: string;
+}
+
+const {
+  heading,
+  body,
+  image,
+  imageSide = 'right',
+  headingLevel = 2,
+  bodyAlign = 'center',
+  class: className = '',
+} = Astro.props;
+
+// „Thema – Untertitel“: Der Teil vor dem Gedankenstrich erscheint als kleine Zeile über dem Rest.
+// Für Screenreader und Suchmaschinen bleibt die Überschrift vollständig (versteckter Gedankenstrich).
+const [, label, title] = heading.match(/^(.+?)\s+[–—]\s+(.+)$/) ?? [undefined, undefined, heading];
+const hasBody = Boolean(body?.length);
+const centered = !image;
+const leftText = centered && bodyAlign === 'left';
+const Heading = headingLevel === 3 ? 'h3' : 'h2';
+
+const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw';
+---
+
+<section class:list={['py-20 sm:py-24 lg:py-28', className]}>
+  <Container>
+    <div class:list={[image ? 'grid items-center gap-10 sm:gap-12 lg:grid-cols-2 lg:gap-16 xl:gap-20' : 'mx-auto max-w-2xl text-center']}>
+      <div data-fade-up class:list={[image && imageSide === 'left' && 'lg:order-2']}>
+        <Heading class="text-balance font-display font-medium text-ink">
+          {
+            label && (
+              <span class="block font-sans text-sm font-semibold tracking-[0.16em] text-anchor-600 uppercase">
+                {label}
+                <span class="sr-only"> – </span>
+              </span>
+            )
+          }
+          <span class:list={['block text-3xl leading-tight sm:text-4xl', label && 'mt-3']}>{title}</span>
+        </Heading>
+        {
+          hasBody && (
+            <PortableTextContent
+              value={body}
+              class:list={[
+                'mt-6 text-pretty sm:mt-8 [&_p]:text-lg [&_p]:leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+                centered ? 'mx-auto' : '',
+                leftText && 'text-left',
+              ]}
+            />
+          )
+        }
+        {Astro.slots.has('default') && <div class:list={['mt-8', leftText && 'text-left']}><slot /></div>}
+      </div>
+      {
+        image && (
+          <div data-fade-up style="--fade-up-delay: 100ms" class:list={[imageSide === 'left' && 'lg:order-1']}>
+            <ContentImage image={image} sizes={IMAGE_SIZES} />
+          </div>
+        )
+      }
+    </div>
+  </Container>
+</section>

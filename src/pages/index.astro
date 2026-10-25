@@ -6,7 +6,8 @@ import SectionHeading from '../components/SectionHeading.astro';
 import CoreTopicCard from '../components/CoreTopicCard.astro';
 import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
 import UpcomingEventsSection from '../components/UpcomingEventsSection.astro';
-import { urlFor } from '../lib/sanity/image';
+import HeroMedia from '../components/HeroMedia.astro';
+import { buildContactMailto } from '../lib/contact';
 import { getHomePage, getRecurringEvents, getSettings, getUpcomingEvents } from '../lib/sanity/api';
 import type { CoreTopic } from '../lib/sanity/types';
 
@@ -39,16 +40,6 @@ const hasHeroVideo = isVideoMode && hasHeroBackground && Boolean(heroVideoAsset?
 // Das Video läuft standardmäßig auf allen Bildschirmgrößen. Nur eine ausdrücklich im CMS gesetzte
 // Deaktivierung blendet es auf Smartphones aus — ein fehlender Wert zählt nicht als „deaktiviert“.
 const heroVideoDisableOnMobile = homePage?.heroVideoDisableOnMobile === true;
-
-const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
-const heroBackgroundImageUrl = hasHeroBackground
-  ? urlFor(heroBaseImage!).width(2000).quality(82).auto('format').fit('max').url()
-  : null;
-const heroBackgroundSrcset = hasHeroBackground
-  ? HERO_BG_WIDTHS.map(
-      (w) => `${urlFor(heroBaseImage!).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
-    ).join(', ')
-  : undefined;
 
 // CSS object-position value. "center center" is special-cased to sit a bit lower so foreground
 // objects (cup, vase, table) stay in frame instead of being cropped at the bottom on desktop.
@@ -140,12 +131,7 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 // Der Kontakt-CTA öffnet direkt das E-Mail-Programm mit der allgemeinen Kontakt-E-Mail aus den
 // Globalen Einstellungen (Kontakt & Adresse → „E-Mail“). Ohne gültige Adresse wird der Button
 // ausgeblendet, statt einen leeren bzw. kaputten mailto:-Link zu erzeugen.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const contactEmail = settings?.email?.trim();
-const contactMailto =
-  contactEmail && EMAIL_PATTERN.test(contactEmail)
-    ? `mailto:${contactEmail}?subject=${encodeURIComponent(`Kontaktanfrage über ${heroIdentityName}`)}`
-    : null;
+const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über ${heroIdentityName}`);
 ---
 
 <BaseLayout title="Willkommen" transparentHeader={hasHeroBackground} footerBorder={false}>
@@ -169,49 +155,13 @@ const contactMailto =
       {
         hasHeroBackground && (
           <>
-            {/* Bild bleibt als dauerhafte unterste Ebene liegen: Lade-/Fallback-Zustand für ein
-                eventuelles Video obendrüber — ganz ohne JavaScript, rein durch CSS-Stapelung. */}
-            <img
-              src={heroBackgroundImageUrl!}
-              srcset={heroBackgroundSrcset}
-              sizes="100vw"
+            <HeroMedia
+              image={heroBaseImage!}
               alt={homePage?.heroBackgroundAlt ?? ''}
-              class="absolute inset-0 h-full w-full object-cover"
-              style={`object-position: ${heroBackgroundPositionStyle};`}
-              fetchpriority="high"
+              position={heroBackgroundPositionStyle}
+              video={hasHeroVideo ? heroVideoAsset : undefined}
+              disableVideoOnMobile={heroVideoDisableOnMobile}
             />
-            {
-              hasHeroVideo && (
-                <>
-                  {/* Das Video bleibt unsichtbar (opacity-0), bis es tatsächlich abspielt — solange es
-                      lädt, blockiert ist (z. B. iOS-Stromsparmodus) oder das Format nicht unterstützt
-                      wird, sieht man darunter das Vorschaubild statt eines schwarzen Rahmens oder eines
-                      Play-Buttons. Ohne JavaScript wird es per <noscript> direkt eingeblendet. */}
-                  <video
-                    id="hero-video"
-                    class:list={[
-                      'absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 ease-out data-[playing=true]:opacity-100 motion-reduce:hidden',
-                      heroVideoDisableOnMobile && 'max-sm:hidden',
-                    ]}
-                    style={`object-position: ${heroBackgroundPositionStyle};`}
-                    autoplay
-                    muted
-                    loop
-                    playsinline
-                    disablepictureinpicture
-                    disableRemotePlayback
-                    preload="metadata"
-                    aria-hidden="true"
-                    tabindex="-1"
-                  >
-                    <source src={heroVideoAsset!.url} type={heroVideoAsset!.mimeType || 'video/mp4'} />
-                  </video>
-                  <noscript>
-                    <style>{'#hero-video { opacity: 1; }'}</style>
-                  </noscript>
-                </>
-              )
-            }
             {/* Dezenter dunkler Verlauf exakt hinter dem transparenten Header, damit Logo und
                 Navigation unabhängig vom Bildinhalt lesbar bleiben — der Header selbst bleibt
                 dadurch komplett durchsichtig, ohne eigenen Farbbalken. */}
@@ -483,66 +433,3 @@ const contactMailto =
   </section>
 </BaseLayout>
 
-<script>
-  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup), und lässt
-  // es nur laufen, solange der Hero sichtbar und der Tab im Vordergrund ist. pause()/play() setzen an
-  // derselben Stelle fort; bereits geladene Videodaten bleiben erhalten. Bei reduzierter Bewegung
-  // bleibt das Video angehalten — das Vorschaubild darunter ist dann sichtbar.
-  const video = document.getElementById('hero-video') as HTMLVideoElement | null;
-  const hero = video?.closest('section');
-  if (video && hero) {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const abort = new AbortController();
-    const { signal } = abort;
-    // Bis der Observer zum ersten Mal meldet, gilt der Hero als sichtbar (Seite startet oben).
-    let heroInView = true;
-
-    const markPlaying = () => (video.dataset.playing = 'true');
-    const sync = () => {
-      const shouldPlay = heroInView && document.visibilityState === 'visible' && !reducedMotion.matches;
-      if (!shouldPlay) {
-        if (!video.paused) video.pause();
-        return;
-      }
-      if (!video.paused) return;
-      // Manche Browser (v. a. iOS Safari) brauchen das muted-Property zusätzlich zum Attribut.
-      video.muted = true;
-      video.play().catch(() => {
-        // Wiedergabe blockiert (z. B. Stromsparmodus): Vorschaubild bzw. letzter Frame bleibt stehen.
-      });
-    };
-
-    // Der Observer meldet sich nur beim Über- bzw. Unterschreiten der Grenze, nicht bei jedem
-    // Scroll-Pixel. Der negative obere rootMargin zählt den Hero erst dann als „nicht mehr sichtbar“,
-    // wenn höchstens noch ein schmaler Streifen (20 % der Viewport-Höhe) oben hervorschaut.
-    const observer =
-      'IntersectionObserver' in window
-        ? new IntersectionObserver(
-            ([entry]) => {
-              heroInView = entry.isIntersecting;
-              sync();
-            },
-            { rootMargin: '-20% 0px 0px 0px', threshold: 0 },
-          )
-        : null;
-    observer?.observe(hero);
-
-    video.addEventListener('playing', markPlaying, { signal });
-    document.addEventListener('visibilitychange', sync, { signal });
-    reducedMotion.addEventListener('change', sync, { signal });
-    // Endgültiges Verlassen der Seite: Observer und Listener aufräumen. Bleibt die Seite im
-    // Back-/Forward-Cache (persisted), bleibt alles aktiv, damit das Video beim Zurückkehren weiterläuft.
-    window.addEventListener(
-      'pagehide',
-      (event) => {
-        if (event.persisted) return;
-        observer?.disconnect();
-        abort.abort();
-      },
-      { signal },
-    );
-
-    if (!video.paused && video.readyState > 2) markPlaying();
-    sync();
-  }
-</script>

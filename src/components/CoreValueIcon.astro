@@ -1,0 +1,47 @@
+---
+import type { CoreValueIcon } from '../lib/sanity/types';
+
+// Dezente Linien-Icons für die Kernwerte der Über-uns-Seite (im CMS auswählbar).
+interface Props {
+  icon: CoreValueIcon;
+}
+
+const { icon } = Astro.props;
+---
+
+<svg viewBox="0 0 24 24" fill="none" class="h-7 w-7" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  {icon === 'cross' && <path d="M12 3.5v17M7.5 8.5h9" stroke-width="1.6" />}
+  {
+    icon === 'heart' && (
+      <path d="M12 19.5s-7-4.3-7-9.4C5 7.6 6.9 6 9 6c1.4 0 2.4.7 3 1.7.6-1 1.6-1.7 3-1.7 2.1 0 4 1.6 4 4.1 0 5.1-7 9.4-7 9.4Z" />
+    )
+  }
+  {
+    icon === 'community' && (
+      <>
+        <circle cx="9" cy="9" r="3.2" />
+        <path d="M3 20c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2" />
+        <circle cx="16.5" cy="9.6" r="2.6" />
+        <path d="M14.8 14.6c2.2.2 4 1.9 4.6 5" />
+      </>
+    )
+  }
+  {
+    icon === 'path' && (
+      <>
+        <circle cx="6" cy="18" r="2" />
+        <circle cx="18" cy="6" r="2" />
+        <path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16" stroke-dasharray="0.1 2.6" stroke-width="1.8" />
+      </>
+    )
+  }
+  {
+    icon === 'place' && (
+      <>
+        <path d="M4 10.5 12 4l8 6.5" />
+        <path d="M6 9v10.5h12V9" />
+        <path d="M10 19.5v-5h4v5" />
+      </>
+    )
+  }
+</svg>

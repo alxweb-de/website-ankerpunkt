@@ -11,6 +11,18 @@ const imageFragment = /* groq */ `{
   crop
 }`;
 
+const captionedImageFragment = /* groq */ `{
+  asset->{
+    _id,
+    url,
+    metadata { lqip, dimensions { width, height } }
+  },
+  alt,
+  caption,
+  hotspot,
+  crop
+}`;
+
 const personFragment = /* groq */ `{
   _id,
   name,
@@ -357,22 +369,89 @@ export const TOPIC_PAGE_QUERY = defineQuery(/* groq */ `
       text
     },
     "primaryButton": primaryButton${ctaFragment},
-    "secondaryButton": secondaryButton${ctaFragment}
+    "secondaryButton": secondaryButton${ctaFragment},
+    heroEyebrow,
+    heroHeading,
+    heroText,
+    heroBackgroundType,
+    "heroImage": heroImage${imageFragment},
+    "heroVideo": heroVideo${fileFragment},
+    heroPosition,
+    heroOverlay,
+    introHeading,
+    introText,
+    sections[]{ _key, heading, body, "image": image${captionedImageFragment}, imagePosition },
+    faithHeading,
+    faithIntro,
+    serviceHeading,
+    serviceText,
+    serviceNote,
+    "serviceEvent": serviceEvent->{ title, "slug": slug.current, isActive },
+    serviceLinkText,
+    "serviceImage": serviceImage${captionedImageFragment},
+    homeGroupHeading,
+    homeGroupText,
+    homeGroupNote,
+    "homeGroupContact": homeGroupContact->${personFragment},
+    "homeGroupImage": homeGroupImage${captionedImageFragment},
+    jesusHeading,
+    jesusText,
+    jesusButtonText,
+    jesusButtonUrl,
+    bookVisible,
+    bookHeading,
+    bookTitle,
+    bookAuthor,
+    bookText,
+    "bookCover": bookCover${imageFragment},
+    bookPdfUrl,
+    bookButtonText,
+    contactHeading,
+    contactText,
+    "contactPerson": contactPerson->${personFragment},
+    contactPersonLabel,
+    buttonText,
+    buttonLink,
+    "seo": seo${seoFragment},
+    "seoImage": seoImage${imageFragment}
   }
 `);
 
 export const ABOUT_PAGE_QUERY = defineQuery(/* groq */ `
   *[_type == "aboutPage"][0]{
-    eyebrow,
-    heading,
-    "groupPhoto": groupPhoto${imageFragment},
-    intro[]{
-      ...,
-      _type == "image" => ${imageFragment}
-    },
+    heroEyebrow,
+    heroHeading,
+    heroText,
+    heroBackgroundType,
+    "heroImage": heroImage${imageFragment},
+    "heroVideo": heroVideo${fileFragment},
+    heroPosition,
+    heroOverlay,
+    whoHeading,
+    whoLead,
+    whoText,
+    "groupPhoto": groupPhoto${captionedImageFragment},
+    valuesHeading,
+    valuesText,
+    coreValues[]{ _key, title, text, icon, "image": image${imageFragment} },
+    creedHeading,
+    creedText,
+    creedItems[]{ _key, title, body, bibleVerses },
+    creedSourceText,
+    creedSourceUrl,
+    freeChurchHeading,
+    freeChurchIntro,
+    freeChurchPrinciples[]{ _key, title, text },
+    freeChurchText,
+    freeChurchClosing,
+    "freeChurchImage": freeChurchImage${captionedImageFragment},
+    peopleHeading,
+    "people": people[]->${personFragment},
+    contactHeading,
+    contactText,
     buttonText,
     buttonLink,
-    peopleHeading,
-    "people": people[]->${personFragment}
+    "seo": seo${seoFragment},
+    "seoImage": seoImage${imageFragment}
   }
 `);

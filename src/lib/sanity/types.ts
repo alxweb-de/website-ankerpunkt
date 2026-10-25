@@ -114,25 +114,59 @@ export interface EventImage extends SanityImageData {
   cropPosition?: ImageCropPosition;
 }
 
-export interface EventSummary {
+/**
+ * Veranstaltung, wie sie aus Sanity kommt. Gepflegt werden nur Titel, Datum und Uhrzeit; der Slug
+ * wird beim ersten Veröffentlichen automatisch gesetzt. Alle übrigen Felder sind Altdaten, die im
+ * Studio ausgeblendet sind und – falls vorhanden – weiterhin angezeigt werden.
+ */
+export interface EventRecord {
   _id: string;
-  title: string;
-  slug: SanitySlug;
-  coverImage?: EventImage;
-  excerpt: string;
-  startDateTime: string;
+  _createdAt: string;
+  title?: string;
+  slug?: SanitySlug;
+  /** Kalenderdatum in deutscher Zeit, „YYYY-MM-DD“. */
+  date?: string;
+  /** „Uhrzeit von“: Beginn in deutscher Zeit, „HH:MM“. */
+  time?: string;
+  /** „Uhrzeit bis“ (optional): Ende am selben Tag, „HH:MM“. */
+  endTime?: string;
+  startDateTime?: string;
   endDateTime?: string;
-  location: string;
-  targetAudience?: string;
-  status: EventStatus;
-  isFeatured?: boolean;
-}
-
-export interface EventDetail extends EventSummary {
+  coverImage?: EventImage;
+  excerpt?: string;
   body?: PortableTextValue;
+  location?: string;
+  targetAudience?: string;
   registrationLink?: string;
   contactPerson?: PersonSummary;
-  seo?: SeoData;
+  status?: EventStatus;
+}
+
+/** Aufbereitete Veranstaltung für die Website (siehe lib/events.ts). */
+export interface EventItem {
+  id: string;
+  title: string;
+  /** Eindeutiger Slug, auch für Termine ohne gespeicherten Slug. */
+  slug: string;
+  href: string;
+  /** Kalenderdatum in deutscher Zeit, „YYYY-MM-DD“. */
+  date: string;
+  /** Beginn in deutscher Zeit, „HH:MM“ (fehlt nur bei unvollständigen Daten). */
+  time?: string;
+  /** Beginn als ISO-Zeitpunkt (UTC). */
+  start: string;
+  /** Ende als ISO-Zeitpunkt – nur, wenn tatsächlich eine Endzeit gepflegt ist („Uhrzeit bis“ oder Altdaten). */
+  end?: string;
+  /** Bis zu diesem Zeitpunkt (ms) gilt der Termin als „kommend“: Ende bzw. Ende des Termintags. */
+  visibleUntil: number;
+  status?: EventStatus;
+  coverImage?: EventImage;
+  excerpt?: string;
+  body?: PortableTextValue;
+  location?: string;
+  targetAudience?: string;
+  registrationLink?: string;
+  contactPerson?: PersonSummary;
 }
 
 export interface NewsSummary {
@@ -254,8 +288,12 @@ export interface HomePage {
   secondaryButton?: CtaLink;
   coreTopicsHeading?: string;
   coreTopics?: CoreTopic[];
+  upcomingEventsHeading?: string;
+  upcomingEventsText?: string;
+  upcomingEventsLimit?: number;
+  upcomingEventsHideWhenEmpty?: boolean;
   featuredNews?: NewsSummary[];
-  featuredEvents?: EventSummary[];
+  featuredEvents?: EventRecord[];
   livestreamVisible?: boolean;
   livestreamEyebrow?: string;
   livestreamHeadline?: string;

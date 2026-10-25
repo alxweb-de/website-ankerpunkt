@@ -14,17 +14,17 @@ const recurringEvents = await getRecurringEvents();
   <Container class="py-16 sm:py-20">
     <SectionHeading eyebrow="Termine" heading="Veranstaltungen" text="Diese Termine erwarten dich als Nächstes bei Ankerpunkt." />
 
-    {
-      events.length > 0 ? (
-        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <EventCard event={event} />
-          ))}
-        </div>
-      ) : (
-        <p class="mt-12 text-ink-soft">Aktuell sind keine Veranstaltungen geplant. Schau bald wieder vorbei.</p>
-      )
-    }
+    {/* Abgelaufene Termine blendet scripts/eventExpiry.ts auch ohne neuen Build aus. */}
+    <div data-event-list>
+      <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" hidden={events.length === 0} data-event-items>
+        {events.map((event) => (
+          <EventCard event={event} />
+        ))}
+      </div>
+      <p class="mt-12 text-ink-soft" hidden={events.length > 0} data-event-empty>
+        Aktuell sind keine Veranstaltungen geplant. Schau bald wieder vorbei.
+      </p>
+    </div>
   </Container>
 
   {
@@ -46,3 +46,7 @@ const recurringEvents = await getRecurringEvents();
     )
   }
 </BaseLayout>
+
+<script>
+  import '../../scripts/eventExpiry';
+</script>

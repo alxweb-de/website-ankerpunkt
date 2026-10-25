@@ -1,0 +1,155 @@
+---
+import Container from './Container.astro';
+import SectionHeading from './SectionHeading.astro';
+import StatusBadge from './StatusBadge.astro';
+import { berlinDateKey, formatEventDate } from '../lib/format';
+import type { EventItem } from '../lib/sanity/types';
+
+interface Props {
+  /** Bereits chronologisch sortiert (siehe lib/events.ts). */
+  events: EventItem[];
+  heading?: string;
+  text?: string;
+  /** Anzahl sichtbarer Termine (Standard 5). */
+  limit?: number;
+  /** Bereich ausblenden statt Hinweis zeigen, wenn kein Termin ansteht. */
+  hideWhenEmpty?: boolean;
+  /** Bestehende Übersichtsseite für den Link „Alle kommenden Veranstaltungen“. */
+  overviewHref?: string;
+  class?: string;
+}
+
+const {
+  events,
+  heading = 'Kommende Veranstaltungen',
+  text = 'Das steht bei uns als Nächstes an.',
+  limit = 5,
+  hideWhenEmpty = false,
+  overviewHref = '/veranstaltungen',
+  class: className = '',
+} = Astro.props;
+
+// Statischer Build: Beim Bauen bereits abgelaufene Termine fallen hier weg. Was danach abläuft,
+// blendet scripts/eventExpiry.ts im Browser aus und lässt die nächsten Termine nachrücken – dafür
+// liegen ein paar Termine mehr als sichtbar im HTML bereit.
+const MAX_RENDERED = 50;
+const buildTime = Date.now();
+const today = berlinDateKey(new Date(buildTime));
+const items = events
+  .filter((event) => event.visibleUntil > buildTime)
+  .slice(0, MAX_RENDERED)
+  .map((event) => ({ event, labels: formatEventDate(event) }));
+
+const safeLimit = Math.max(1, Math.floor(limit));
+const isEmpty = items.length === 0;
+const hasMore = items.length > safeLimit;
+---
+
+{
+  !(isEmpty && hideWhenEmpty) && (
+    <section
+      class:list={['py-20', className]}
+      data-event-list
+      data-limit={safeLimit}
+      data-hide-when-empty={hideWhenEmpty ? 'true' : undefined}
+    >
+      <Container>
+        <SectionHeading heading={heading} text={text} align="center" class="mx-auto" />
+
+        <div class="mx-auto mt-12 max-w-[50rem]">
+          <ul class="upcoming-events-list" hidden={isEmpty} data-event-items>
+            {items.map(({ event, labels }, index) => (
+              <li
+                class="upcoming-event-item"
+                data-event-end={event.visibleUntil}
+                data-event-date={event.date}
+                hidden={index >= safeLimit}
+              >
+                <a
+                  href={event.href}
+                  class="group flex items-center gap-3.5 rounded-2xl px-1 py-4 transition-colors duration-200 hover:bg-anchor-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-800 sm:gap-6 sm:px-4 sm:py-5"
+                >
+                  <time
+                    datetime={event.date}
+                    class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-anchor-50 text-anchor-900 ring-1 ring-anchor-100 sm:h-[4.5rem] sm:w-[4.5rem]"
+                  >
+                    <span class="sr-only">{labels.fullDate}</span>
+                    <span class="text-[1.375rem] leading-none font-semibold tabular-nums sm:text-[1.75rem]" aria-hidden="true">
+                      {labels.day}
+                    </span>
+                    <span class="mt-1.5 text-xs font-medium tracking-wider text-anchor-700 uppercase" aria-hidden="true">
+                      {labels.month}
+                    </span>
+                  </time>
+
+                  <div class="min-w-0 flex-1">
+                    <h3
+                      class:list={[
+                        'font-display text-lg leading-snug font-medium break-words text-ink transition-colors group-hover:text-anchor-800 sm:text-xl',
+                        event.status === 'cancelled' && 'text-ink-soft line-through decoration-ink/30',
+                      ]}
+                    >
+                      {event.title}
+                    </h3>
+                    <p class="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.9375rem] leading-snug text-ink-soft sm:text-base">
+                      <span>{labels.weekdayTimeLabel}</span>
+                      <span
+                        class="rounded-full bg-anchor-100 px-2 py-0.5 text-xs font-semibold tracking-wide text-anchor-800 uppercase"
+                        data-event-today
+                        hidden={event.date !== today}
+                      >
+                        Heute
+                      </span>
+                      {event.status && event.status !== 'planned' && <StatusBadge status={event.status} class="px-2 py-0.5" />}
+                    </p>
+                  </div>
+
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    class="h-4 w-4 shrink-0 text-anchor-600 transition-transform duration-200 group-hover:translate-x-0.5 sm:h-5 sm:w-5"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <p class="text-center text-ink-soft" hidden={!isEmpty} data-event-empty>
+            Aktuell sind keine kommenden Veranstaltungen eingetragen.
+          </p>
+
+          {
+            overviewHref && (
+              <div class="mt-8 text-center" hidden={!hasMore} data-event-more>
+                <a
+                  href={overviewHref}
+                  class="inline-flex items-center gap-1.5 text-sm font-medium text-anchor-700 hover:text-anchor-900 sm:text-base"
+                >
+                  Alle kommenden Veranstaltungen
+                  <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4" aria-hidden="true">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              </div>
+            )
+          }
+        </div>
+      </Container>
+    </section>
+  )
+}
+
+<style>
+  /* Feine Trennlinie nur zwischen sichtbaren Einträgen (nicht über dem ersten, nicht unter dem
+     letzten) – ausgeblendete Nachrücker-Einträge beeinflussen die Linien so nicht. */
+  .upcoming-event-item:not([hidden]) ~ .upcoming-event-item:not([hidden]) {
+    border-top: 1px solid rgb(28 31 30 / 0.07);
+  }
+</style>
+
+<script>
+  import '../scripts/eventExpiry';
+</script>

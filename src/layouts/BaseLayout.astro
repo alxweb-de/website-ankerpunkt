@@ -6,22 +6,26 @@ import { getSettings } from '../lib/sanity/api';
 
 interface Props {
   title: string;
+  /** Vollständiger Seitentitel; ersetzt das Schema „Titel · Gemeindename“. */
+  fullTitle?: string;
   description?: string;
   ogImage?: string;
   transparentHeader?: boolean;
   footerBorder?: boolean;
 }
 
-const { title, description, ogImage, transparentHeader = false, footerBorder = true } = Astro.props;
+const { title, fullTitle, description, ogImage, transparentHeader = false, footerBorder = true } = Astro.props;
 const settings = await getSettings();
 
 const siteName = settings?.churchName ?? 'Ankerpunkt';
-const pageTitle = title ? `${title} · ${siteName}` : siteName;
+const pageTitle = fullTitle || (title ? `${title} · ${siteName}` : siteName);
 const pageDescription =
   description ??
   'EF-Horhausen (Evangelische Freikirche Horhausen) ist eine lebendige Kirchengemeinde in Horhausen mit offenen Türen für Familien, Jugendliche und Erwachsene.';
 
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin);
+// Canonical-URL nur mit konfigurierter Live-Domain (SITE_URL, siehe astro.config.mjs) – sonst
+// würde der statische Build auf die Adresse des Build-Rechners (z. B. localhost) verweisen.
+const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 ---
 
 <!doctype html>
@@ -30,7 +34,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin)
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="canonical" href={canonicalUrl} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
@@ -39,6 +43,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin)
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:locale" content="de_DE" />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
     {ogImage && <meta property="og:image" content={ogImage} />}
 
     <meta name="twitter:card" content="summary_large_image" />
@@ -53,6 +58,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin)
     />
 
     <meta name="generator" content={Astro.generator} />
+    <slot name="head" />
   </head>
   <body class="flex min-h-screen flex-col">
     <a

@@ -48,18 +48,22 @@ const eventImageFragment = /* groq */ `{
   cropPosition
 }`;
 
-const eventSummaryFragment = /* groq */ `{
+const eventFragment = /* groq */ `{
   _id,
+  _createdAt,
   title,
   slug,
-  "coverImage": coverImage${eventImageFragment},
-  excerpt,
+  date,
+  time,
+  endTime,
   startDateTime,
   endDateTime,
+  "coverImage": coverImage${eventImageFragment},
+  excerpt,
   location,
   targetAudience,
-  status,
-  isFeatured
+  registrationLink,
+  status
 }`;
 
 const newsSummaryFragment = /* groq */ `{
@@ -208,8 +212,12 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     "secondaryButton": secondaryButton${ctaFragment},
     coreTopicsHeading,
     "coreTopics": coreTopics[]${coreTopicFragment},
+    upcomingEventsHeading,
+    upcomingEventsText,
+    upcomingEventsLimit,
+    upcomingEventsHideWhenEmpty,
     "featuredNews": featuredNews[]->${newsSummaryFragment},
-    "featuredEvents": featuredEvents[]->${eventSummaryFragment},
+    "featuredEvents": featuredEvents[]->${eventFragment},
     livestreamVisible,
     livestreamEyebrow,
     livestreamHeadline,
@@ -221,39 +229,32 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
   }
 `);
 
-export const UPCOMING_EVENTS_QUERY = defineQuery(/* groq */ `
-  *[_type == "event" && startDateTime >= now()] | order(startDateTime asc)${eventSummaryFragment}
-`);
-
-export const UPCOMING_EVENTS_LIMIT_QUERY = defineQuery(/* groq */ `
-  *[_type == "event" && startDateTime >= now()] | order(startDateTime asc)[0...$limit]${eventSummaryFragment}
-`);
-
-export const EVENT_BY_SLUG_QUERY = defineQuery(/* groq */ `
-  *[_type == "event" && slug.current == $slug][0]{
+// Alle Veranstaltungen (wenige Dutzend). Sortierung, Ablauf und eindeutige Slugs werden in
+// lib/events.ts in deutscher Zeit berechnet – das funktioniert auch für Altdaten, die nur
+// `startDateTime` statt `date`/`time` besitzen.
+export const EVENTS_QUERY = defineQuery(/* groq */ `
+  *[_type == "event" && defined(title) && (defined(date) || defined(startDateTime))] | order(_createdAt asc){
     _id,
+    _createdAt,
     title,
     slug,
+    date,
+    time,
+    endTime,
+    startDateTime,
+    endDateTime,
     "coverImage": coverImage${eventImageFragment},
     excerpt,
     body[]{
       ...,
       _type == "image" => ${imageFragment}
     },
-    startDateTime,
-    endDateTime,
     location,
     targetAudience,
     registrationLink,
     "contactPerson": contactPerson->${personFragment},
-    status,
-    isFeatured,
-    "seo": seo${seoFragment}
+    status
   }
-`);
-
-export const EVENT_SLUGS_QUERY = defineQuery(/* groq */ `
-  *[_type == "event" && defined(slug.current)]{ "slug": slug.current }
 `);
 
 export const NEWS_LIST_QUERY = defineQuery(/* groq */ `

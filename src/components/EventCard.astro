@@ -1,88 +1,72 @@
 ---
-import MediaFrame from './MediaFrame.astro';
-import PlaceholderImage from './PlaceholderImage.astro';
 import StatusBadge from './StatusBadge.astro';
-import { urlFor } from '../lib/sanity/image';
-import { formatTime, formatWeekdayFromDate } from '../lib/format';
-import type { EventStatus, EventSummary } from '../lib/sanity/types';
+import { berlinDateKey, formatEventDate } from '../lib/format';
+import type { EventItem } from '../lib/sanity/types';
 
 interface Props {
-  event: EventSummary;
+  event: EventItem;
   class?: string;
 }
 
 const { event, class: className = '' } = Astro.props;
-const displayMode = event.coverImage?.displayMode ?? 'contain';
-const cropPosition = event.coverImage?.cropPosition ?? 'center';
-const objectPositionClass = { top: 'object-top', center: 'object-center', bottom: 'object-bottom' }[cropPosition];
-const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(800).fit('max').url() : null;
-
-const date = new Date(event.startDateTime);
-const day = date.getDate();
-const month = date.toLocaleDateString('de-DE', { month: 'short' });
-
-const accentByStatus: Record<EventStatus, string> = {
-  planned: 'bg-anchor-600',
-  soldOut: 'bg-sand-500',
-  cancelled: 'bg-rose-400',
-};
+const labels = formatEventDate(event);
+const isToday = event.date === berlinDateKey(new Date());
+const isCancelled = event.status === 'cancelled';
 ---
 
-<a href={`/veranstaltungen/${event.slug.current}`} class:list={['group flex flex-col overflow-hidden card-shell', className]}>
-  <span class:list={['block h-1 w-full', accentByStatus[event.status]]} aria-hidden="true" />
+{/* Einheitliche Terminkarte ohne Bild: großes Datumsfeld als ruhiger Blickfang, darunter Wochentag,
+    Uhrzeit und Titel. data-event-* steuert das Ausblenden abgelaufener Termine im Browser
+    (scripts/eventExpiry.ts). */}
+<a
+  href={event.href}
+  class:list={['group relative flex h-full flex-col overflow-hidden card-shell p-6 sm:p-7', className]}
+  data-event-end={event.visibleUntil}
+  data-event-date={event.date}
+>
+  <span class="absolute inset-x-0 top-0 h-1 bg-anchor-600/80" aria-hidden="true" />
 
-  <MediaFrame class:list={['aspect-[16/10] w-full', displayMode === 'contain' && 'bg-anchor-50/60']}>
-    {
-      imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={event.coverImage?.alt ?? ''}
-          loading="lazy"
-          class:list={[
-            'h-full w-full transition-transform duration-500 group-hover:scale-105',
-            displayMode === 'contain' ? 'object-contain p-3' : ['object-cover', objectPositionClass],
-          ]}
-        />
-      ) : (
-        <PlaceholderImage class="h-full w-full transition-transform duration-500 group-hover:scale-105" label={event.title} />
-      )
-    }
-    <div class="absolute top-4 left-4 flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-white/95 text-anchor-900 shadow-md ring-1 ring-ink/5">
-      <span class="text-lg leading-none font-semibold">{day}</span>
-      <span class="mt-1 h-px w-5 bg-ink/10" />
-      <span class="mt-1 text-[10px] font-medium tracking-wide uppercase">{month}</span>
-    </div>
-    {event.status !== 'planned' && (
-      <div class="absolute top-4 right-4">
-        <StatusBadge status={event.status} class="shadow-sm" />
-      </div>
-    )}
-  </MediaFrame>
+  <div class="flex items-start justify-between gap-4">
+    <time
+      datetime={event.date}
+      class="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-2xl bg-anchor-50 text-anchor-900 ring-1 ring-anchor-100"
+    >
+      <span class="sr-only">{labels.fullDate}</span>
+      <span class="text-[1.75rem] leading-none font-semibold tabular-nums" aria-hidden="true">{labels.day}</span>
+      <span class="mt-1.5 text-xs font-medium tracking-wider text-anchor-700 uppercase" aria-hidden="true">{labels.month}</span>
+    </time>
 
-  <div class="flex flex-1 flex-col gap-3 p-6">
-    <p class="text-xs font-semibold tracking-wide text-anchor-600 uppercase">
-      {formatWeekdayFromDate(event.startDateTime)} · {formatTime(event.startDateTime)} Uhr
-    </p>
-    <h3 class="font-display text-xl font-medium text-ink">{event.title}</h3>
-    <p class="line-clamp-2 text-sm leading-relaxed text-ink-soft">{event.excerpt}</p>
-    <div class="mt-auto flex items-end justify-between gap-3 border-t border-ink/8 pt-4">
-      <p class="flex min-w-0 items-center gap-1.5 text-sm text-ink-soft/80">
-        <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 shrink-0" aria-hidden="true">
-          <path
-            d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z"
-            stroke="currentColor"
-            stroke-width="1.3"
-          />
-          <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
-        </svg>
-        <span class="truncate">{event.location}</span>
-      </p>
-      <span class="flex shrink-0 items-center gap-1 text-sm font-medium text-anchor-700">
-        Details
-        <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true">
-          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+    <div class="flex flex-wrap justify-end gap-2">
+      <span
+        class="rounded-full bg-anchor-100 px-2.5 py-1 text-xs font-semibold tracking-wide text-anchor-800 uppercase"
+        data-event-today
+        hidden={!isToday}
+      >
+        Heute
       </span>
+      {event.status && event.status !== 'planned' && <StatusBadge status={event.status} />}
     </div>
+  </div>
+
+  <p class="mt-6 text-xs font-semibold tracking-wide text-anchor-600 uppercase">{labels.weekdayTimeLabel}</p>
+  <h3
+    class:list={[
+      'mt-2 font-display text-xl leading-snug font-medium break-words text-ink transition-colors group-hover:text-anchor-800',
+      isCancelled && 'text-ink-soft line-through decoration-ink/30',
+    ]}
+  >
+    {event.title}
+  </h3>
+
+  {/* Platzhalter: hält die Fußzeile bei unterschiedlich langen Titeln auf gleicher Höhe. */}
+  <div class="min-h-6 flex-1" aria-hidden="true" />
+
+  <div class="flex items-end justify-between gap-3 border-t border-ink/8 pt-4">
+    <span class="text-sm text-ink-soft/80">{labels.shortDate}</span>
+    <span class="flex shrink-0 items-center gap-1 text-sm font-medium text-anchor-700">
+      Details
+      <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
   </div>
 </a>

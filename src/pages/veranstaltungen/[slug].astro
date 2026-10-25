@@ -1,32 +1,86 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Container from '../../components/Container.astro';
-import PlaceholderImage from '../../components/PlaceholderImage.astro';
 import PortableTextContent from '../../components/PortableTextContent.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
 import PersonCard from '../../components/PersonCard.astro';
 import CtaButton from '../../components/CtaButton.astro';
 import { urlFor } from '../../lib/sanity/image';
-import { formatDateTimeRange } from '../../lib/format';
-import { getEventBySlug, getEventSlugs } from '../../lib/sanity/api';
+import { formatEventDate, toBerlinIsoString } from '../../lib/format';
+import { getEvents, getSettings } from '../../lib/sanity/api';
+import type { EventItem } from '../../lib/sanity/types';
 
+// Jede Veranstaltung erhält ihre eigene Seite – auch gleichnamige Termine, da lib/events.ts
+// eindeutige Slugs garantiert.
 export async function getStaticPaths() {
-  const slugs = await getEventSlugs();
-  return slugs.map(({ slug }) => ({ params: { slug } }));
+  const events = await getEvents();
+  return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
 }
 
-const { slug } = Astro.params;
-const event = await getEventBySlug(slug);
-
-if (!event) {
-  return Astro.redirect('/veranstaltungen');
-}
+const { event }: { event: EventItem } = Astro.props;
+const settings = await getSettings();
+const siteName = settings?.churchName ?? 'Ankerpunkt';
+const labels = formatEventDate(event);
 
 const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).fit('max').url() : null;
-const isBookable = event.status === 'planned' && event.registrationLink;
+const isBookable = event.status !== 'cancelled' && event.status !== 'soldOut' && event.registrationLink;
+const isPast = event.visibleUntil <= Date.now();
+
+// SEO – ausschließlich aus vorhandenen Angaben erzeugt, nichts wird ergänzt oder geschätzt.
+const seoTitle = `${event.title} am ${labels.shortDate} | ${siteName}`;
+const seoDescription = truncate(
+  [
+    // Gleiche Zeitangabe wie auf der Seite: „10:30 Uhr“ bzw. „10:30–11:30 Uhr“.
+    `${event.title} am ${labels.fullDate}${labels.timeLabel ? `, ${labels.timeLabel}` : ''}`,
+    event.location ? ` in ${event.location}` : '',
+    `. ${event.excerpt ? event.excerpt.replace(/([^.!?…])$/, '$1.') : `Alle Infos zum Termin bei ${siteName}.`}`,
+  ].join(''),
+  160,
+);
+
+/** Kürzt auf max. `length` Zeichen an einer Wortgrenze (Suchmaschinen zeigen ca. 155–160 Zeichen). */
+function truncate(text: string, length: number) {
+  if (text.length <= length) return text;
+  return `${text.slice(0, length - 1).replace(/\s+\S*$/, '')}…`;
+}
+
+const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+
+// Schema.org/Event: Pflichtangaben name + startDate sind immer vorhanden. Ort, Ende, Status, Bild
+// und Beschreibung nur, wenn sie tatsächlich gepflegt sind. Veranstalter ist die Gemeinde selbst.
+const eventStatus = {
+  planned: 'https://schema.org/EventScheduled',
+  soldOut: 'https://schema.org/EventScheduled',
+  cancelled: 'https://schema.org/EventCancelled',
+} as const;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name: event.title,
+  // Ohne Uhrzeit nur das Datum angeben, statt eine Uhrzeit zu erfinden.
+  startDate: event.time ? toBerlinIsoString(new Date(event.start)) : event.date,
+  ...(event.end && { endDate: toBerlinIsoString(new Date(event.end)) }),
+  ...(event.status && { eventStatus: eventStatus[event.status] }),
+  ...(event.location && {
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: { '@type': 'Place', name: event.location, address: event.location },
+  }),
+  ...(event.excerpt && { description: event.excerpt }),
+  ...(imageUrl && { image: [imageUrl] }),
+  ...(canonicalUrl && { url: canonicalUrl }),
+  organizer: {
+    '@type': 'Organization',
+    name: siteName,
+    ...(Astro.site && { url: Astro.site.href }),
+  },
+};
+// `<` maskieren, damit Inhalte das Skript-Tag nicht vorzeitig schließen können.
+const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 ---
 
-<BaseLayout title={event.seo?.title || event.title} description={event.seo?.description || event.excerpt} ogImage={imageUrl ?? undefined}>
+<BaseLayout title={event.title} fullTitle={seoTitle} description={seoDescription} ogImage={imageUrl ?? undefined}>
+  <script is:inline type="application/ld+json" slot="head" set:html={jsonLdHtml} />
+
   <article class="py-16 sm:py-20">
     <Container class="max-w-3xl">
       <a href="/veranstaltungen" class="inline-flex items-center gap-1.5 text-sm font-medium text-anchor-700 hover:text-anchor-900">
@@ -36,52 +90,54 @@ const isBookable = event.status === 'planned' && event.registrationLink;
         Alle Veranstaltungen
       </a>
 
-      <div class="mt-6 flex flex-wrap items-center gap-3">
-        {event.status !== 'planned' && <StatusBadge status={event.status} />}
-        {event.targetAudience && <span class="rounded-full bg-anchor-50 px-2.5 py-1 text-xs font-medium text-anchor-700">{event.targetAudience}</span>}
-      </div>
-
-      <h1 class="mt-4 font-display text-3xl font-medium text-ink sm:text-4xl">{event.title}</h1>
-      <p class="mt-4 text-lg leading-relaxed text-ink-soft">{event.excerpt}</p>
-
-      <div class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
-        {
-          imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={event.coverImage?.alt ?? ''}
-              class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain"
-            />
-          ) : (
-            <div class="aspect-[16/9] overflow-hidden rounded-2xl">
-              <PlaceholderImage class="h-full w-full" label={event.title} />
-            </div>
-          )
-        }
-      </div>
-
-      <div class="mt-10 grid grid-cols-1 gap-6 rounded-2xl bg-anchor-50/60 p-6 sm:grid-cols-2">
-        <div class="flex items-start gap-3">
-          <svg viewBox="0 0 16 16" fill="none" class="mt-0.5 h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-            <rect x="2.5" y="3" width="11" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-            <path d="M2.5 6h11M5.5 1.8v2.4M10.5 1.8v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-          </svg>
-          <div>
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Termin</p>
-            <p class="mt-1 text-sm text-ink">{formatDateTimeRange(event.startDateTime, event.endDateTime)}</p>
+      {
+        (event.status && event.status !== 'planned') || event.targetAudience ? (
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            {event.status && event.status !== 'planned' && <StatusBadge status={event.status} />}
+            {event.targetAudience && (
+              <span class="rounded-full bg-anchor-50 px-2.5 py-1 text-xs font-medium text-anchor-700">{event.targetAudience}</span>
+            )}
           </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <svg viewBox="0 0 16 16" fill="none" class="mt-0.5 h-5 w-5 shrink-0 text-anchor-600" aria-hidden="true">
-            <path d="M8 14.5S13 10 13 6.5a5 5 0 1 0-10 0C3 10 8 14.5 8 14.5Z" stroke="currentColor" stroke-width="1.3" />
-            <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.3" />
-          </svg>
-          <div>
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Ort</p>
-            <p class="mt-1 text-sm text-ink">{event.location}</p>
-          </div>
+        ) : null
+      }
+
+      <h1 class="mt-6 text-balance font-display text-3xl font-medium break-words text-ink sm:text-4xl">{event.title}</h1>
+
+      {/* Termin-Block: dasselbe Datumsfeld wie in Liste und Karten, damit alle Ansichten eine Sprache sprechen. */}
+      <div class="mt-8 flex items-center gap-5 rounded-3xl bg-anchor-50/60 p-5 sm:gap-6 sm:p-6">
+        <time
+          datetime={event.time ? toBerlinIsoString(new Date(event.start)) : event.date}
+          class="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl bg-paper text-anchor-900 ring-1 ring-anchor-100"
+        >
+          <span class="sr-only">{labels.fullDate}</span>
+          <span class="text-3xl leading-none font-semibold tabular-nums" aria-hidden="true">{labels.day}</span>
+          <span class="mt-1.5 text-xs font-medium tracking-wider text-anchor-700 uppercase" aria-hidden="true">{labels.month}</span>
+        </time>
+        <div class="min-w-0">
+          <p class="text-lg font-medium text-ink sm:text-xl">{labels.fullDate}</p>
+          {labels.timeLabel && <p class="mt-1 text-base text-ink-soft sm:text-lg">{labels.timeLabel}</p>}
+          {event.location && <p class="mt-1 text-base text-ink-soft">{event.location}</p>}
         </div>
       </div>
+
+      {/* Hinweis für vergangene Termine – wird auch ohne neuen Build sichtbar, sobald der Termin vorbei ist. */}
+      <p
+        class="mt-6 rounded-2xl bg-sand-50 px-5 py-4 text-sm text-sand-800 ring-1 ring-sand-200/70"
+        hidden={!isPast}
+        data-show-after={event.visibleUntil}
+      >
+        Diese Veranstaltung hat bereits stattgefunden.
+      </p>
+
+      {event.excerpt && <p class="mt-8 text-lg leading-relaxed text-ink-soft">{event.excerpt}</p>}
+
+      {
+        imageUrl && (
+          <div class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
+            <img src={imageUrl} alt={event.coverImage?.alt ?? ''} class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain" />
+          </div>
+        )
+      }
 
       {
         isBookable && (
@@ -91,9 +147,13 @@ const isBookable = event.status === 'planned' && event.registrationLink;
         )
       }
 
-      <PortableTextContent value={event.body} class="mt-10" />
+      {event.body && <PortableTextContent value={event.body} class="mt-10" />}
 
       {event.contactPerson && <PersonCard person={event.contactPerson} class="mt-10" />}
     </Container>
   </article>
 </BaseLayout>
+
+<script>
+  import '../../scripts/eventExpiry';
+</script>

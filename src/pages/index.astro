@@ -5,13 +5,17 @@ import CtaButton from '../components/CtaButton.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import CoreTopicCard from '../components/CoreTopicCard.astro';
 import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
+import UpcomingEventsSection from '../components/UpcomingEventsSection.astro';
 import { urlFor } from '../lib/sanity/image';
-import { getHomePage, getRecurringEvents, getSettings } from '../lib/sanity/api';
+import { getHomePage, getRecurringEvents, getSettings, getUpcomingEvents } from '../lib/sanity/api';
 import type { CoreTopic } from '../lib/sanity/types';
 
 const homePage = await getHomePage();
 const settings = await getSettings();
 const recurringEvents = await getRecurringEvents();
+// Nur kommende Termine, chronologisch sortiert. Was nach dem Build abläuft, blendet
+// UpcomingEventsSection zusätzlich im Browser aus.
+const upcomingEvents = await getUpcomingEvents();
 
 // Fallback, falls im CMS noch keine Kernthemen-Kacheln gepflegt sind.
 const DEFAULT_CORE_TOPICS: CoreTopic[] = [
@@ -384,6 +388,14 @@ const contactMailto =
       </section>
     )
   }
+
+  <UpcomingEventsSection
+    events={upcomingEvents}
+    heading={homePage?.upcomingEventsHeading || undefined}
+    text={homePage?.upcomingEventsText || undefined}
+    limit={homePage?.upcomingEventsLimit ?? 5}
+    hideWhenEmpty={homePage?.upcomingEventsHideWhenEmpty ?? false}
+  />
 
   <section class="py-16 sm:py-20">
     <Container>

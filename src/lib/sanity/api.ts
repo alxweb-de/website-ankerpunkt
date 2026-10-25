@@ -1,9 +1,9 @@
 import { sanityClient } from './client';
+import { normalizeEvents } from '../events';
 import {
   ABOUT_PAGE_QUERY,
   ACTIVE_PEOPLE_QUERY,
-  EVENT_BY_SLUG_QUERY,
-  EVENT_SLUGS_QUERY,
+  EVENTS_QUERY,
   GROUP_BY_SLUG_QUERY,
   GROUP_SLUGS_QUERY,
   GROUPS_QUERY,
@@ -16,13 +16,10 @@ import {
   RECURRING_EVENTS_QUERY,
   SETTINGS_QUERY,
   TOPIC_PAGE_QUERY,
-  UPCOMING_EVENTS_LIMIT_QUERY,
-  UPCOMING_EVENTS_QUERY,
 } from './queries';
 import type {
   AboutPage,
-  EventDetail,
-  EventSummary,
+  EventRecord,
   GroupDetail,
   GroupSummary,
   HomePage,
@@ -51,20 +48,14 @@ export async function getTopicPage(id: string) {
   return sanityClient.fetch<TopicPage | null>(TOPIC_PAGE_QUERY, { id });
 }
 
-export async function getUpcomingEvents() {
-  return sanityClient.fetch<EventSummary[]>(UPCOMING_EVENTS_QUERY);
+/** Alle Veranstaltungen, chronologisch sortiert und mit eindeutigen Slugs (siehe lib/events.ts). */
+export async function getEvents() {
+  return normalizeEvents(await sanityClient.fetch<EventRecord[]>(EVENTS_QUERY));
 }
 
-export async function getUpcomingEventsLimited(limit: number) {
-  return sanityClient.fetch<EventSummary[]>(UPCOMING_EVENTS_LIMIT_QUERY, { limit });
-}
-
-export async function getEventBySlug(slug: string) {
-  return sanityClient.fetch<EventDetail | null>(EVENT_BY_SLUG_QUERY, { slug });
-}
-
-export async function getEventSlugs() {
-  return sanityClient.fetch<{ slug: string }[]>(EVENT_SLUGS_QUERY);
+/** Kommende Veranstaltungen: Termine, deren Tag (bzw. bei Altdaten deren Ende) noch nicht vorbei ist. */
+export async function getUpcomingEvents(now = Date.now()) {
+  return (await getEvents()).filter((event) => event.visibleUntil > now);
 }
 
 export async function getNewsList() {

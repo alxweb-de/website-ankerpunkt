@@ -2,50 +2,80 @@
 import { urlFor } from '../lib/sanity/image';
 import type { SanityFileData, SanityImageData } from '../lib/sanity/types';
 
-// Vollflächiges Hero-Hintergrundbild mit optionalem Hintergrundvideo darüber – gemeinsam genutzt von
-// Startseite und Über-uns-Seite. Muss in einem positionierten Container liegen (füllt ihn per inset-0);
-// Verläufe und Abdunklungen legt die jeweilige Seite selbst darüber.
+// Vollflächiger Hero-Hintergrund – gemeinsam genutzt von Startseite und Unterseiten (über PageHero).
+// Muss in einem positionierten Container liegen (füllt ihn per inset-0); Verläufe und Abdunklungen legt
+// die jeweilige Seite selbst darüber.
+//
+// Zwei voneinander unabhängige Modi:
+// - Bild (`image`, kein `video`): nur das Bild, es wird kein Video geladen.
+// - Video (`video`): das Video allein genügt. Bis der erste Frame da ist, liegt nur eine neutrale,
+//   warme Fläche darunter – kein Bild. Das optionale `poster` erscheint ausschließlich als Ersatz:
+//   bei „Bewegung reduzieren“, bei einem Ladefehler bzw. blockierter Wiedergabe und (falls im CMS so
+//   eingestellt) auf Smartphones mit deaktiviertem Video.
 interface Props {
-  image: SanityImageData;
-  alt?: string;
-  /** CSS object-position für Bild und Video. */
-  position: string;
+  image?: SanityImageData;
   video?: SanityFileData['asset'];
+  poster?: SanityImageData;
+  alt?: string;
+  /** CSS object-position für Bild, Video und Poster. */
+  position: string;
   disableVideoOnMobile?: boolean;
 }
 
-const { image, alt = '', position, video, disableVideoOnMobile = false } = Astro.props;
+const { image, video, poster, alt = '', position, disableVideoOnMobile = false } = Astro.props;
 
 const HERO_BG_WIDTHS = [640, 960, 1280, 1920, 2400];
-const imageUrl = urlFor(image).width(2000).quality(82).auto('format').fit('max').url();
-const srcset = HERO_BG_WIDTHS.map(
-  (w) => `${urlFor(image).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
-).join(', ');
-const hasVideo = Boolean(video?.url);
+const imageSources = (source: SanityImageData) => ({
+  src: urlFor(source).width(2000).quality(82).auto('format').fit('max').url(),
+  srcset: HERO_BG_WIDTHS.map(
+    (w) => `${urlFor(source).width(w).quality(w <= 960 ? 78 : 82).auto('format').fit('max').url()} ${w}w`,
+  ).join(', '),
+});
+
+const videoUrl = video?.url;
+const stillImage = !videoUrl && image?.asset ? imageSources(image) : null;
+const posterImage = videoUrl && poster?.asset ? imageSources(poster) : null;
 ---
 
-{/* Bild bleibt als dauerhafte unterste Ebene liegen: Lade-/Fallback-Zustand für ein
-    eventuelles Video obendrüber — ganz ohne JavaScript, rein durch CSS-Stapelung. */}
-<img
-  src={imageUrl}
-  srcset={srcset}
-  sizes="100vw"
-  alt={alt}
-  class="absolute inset-0 h-full w-full object-cover"
-  style={`object-position: ${position};`}
-  fetchpriority="high"
-/>
 {
-  hasVideo && (
-    <>
-      {/* Das Video bleibt unsichtbar (opacity-0), bis es tatsächlich abspielt — solange es
-          lädt, blockiert ist (z. B. iOS-Stromsparmodus) oder das Format nicht unterstützt
-          wird, sieht man darunter das Vorschaubild statt eines schwarzen Rahmens oder eines
-          Play-Buttons. Ohne JavaScript wird es per <noscript> direkt eingeblendet. */}
+  stillImage && (
+    <img
+      src={stillImage.src}
+      srcset={stillImage.srcset}
+      sizes="100vw"
+      alt={alt}
+      class="absolute inset-0 h-full w-full object-cover"
+      style={`object-position: ${position};`}
+      fetchpriority="high"
+    />
+  )
+}
+{
+  videoUrl && (
+    <div id="hero-video-root" class="group/hero-video absolute inset-0 bg-sand-800">
+      {/* Ersatzbild: per CSS ausgeblendet (display: none) und loading="lazy" – der Browser lädt es
+          also nur, wenn es tatsächlich gebraucht wird, und es konkurriert nicht mit dem Video. */}
+      {posterImage && (
+        <img
+          src={posterImage.src}
+          srcset={posterImage.srcset}
+          sizes="100vw"
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          class:list={[
+            'absolute inset-0 hidden h-full w-full object-cover group-data-[video-failed=true]/hero-video:block motion-reduce:block',
+            disableVideoOnMobile && 'max-sm:block',
+          ]}
+          style={`object-position: ${position};`}
+        />
+      )}
+      {/* Unsichtbar (opacity-0), bis ein Frame verfügbar ist – so erscheint weder ein schwarzer Rahmen
+          noch ein Play-Symbol (z. B. iOS-Stromsparmodus). Ohne JavaScript per <noscript> sofort sichtbar. */}
       <video
         id="hero-video"
         class:list={[
-          'absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 ease-out data-[playing=true]:opacity-100 motion-reduce:hidden',
+          'absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 ease-out data-[ready=true]:opacity-100 group-data-[video-failed=true]/hero-video:hidden motion-reduce:hidden',
           disableVideoOnMobile && 'max-sm:hidden',
         ]}
         style={`object-position: ${position};`}
@@ -55,36 +85,40 @@ const hasVideo = Boolean(video?.url);
         playsinline
         disablepictureinpicture
         disableRemotePlayback
-        preload="metadata"
+        preload="auto"
         aria-hidden="true"
         tabindex="-1"
       >
-        <source src={video!.url} type={video!.mimeType || 'video/mp4'} />
+        <source src={videoUrl} type={video!.mimeType || 'video/mp4'} />
       </video>
       <noscript>
         <style>{'#hero-video { opacity: 1; }'}</style>
       </noscript>
-    </>
+    </div>
   )
 }
 
 <script>
-  // Blendet das Hero-Video erst ein, sobald es wirklich läuft (siehe opacity-0 im Markup), und lässt
-  // es nur laufen, solange der Hero sichtbar und der Tab im Vordergrund ist. pause()/play() setzen an
-  // derselben Stelle fort; bereits geladene Videodaten bleiben erhalten. Bei reduzierter Bewegung
-  // bleibt das Video angehalten — das Vorschaubild darunter ist dann sichtbar.
+  // Blendet das Hero-Video ein, sobald ein Frame verfügbar ist (loadeddata) oder es läuft (playing) –
+  // „playing“ bzw. ein erfolgreiches play() greifen auch dort, wo loadeddata ausbleibt (z. B. bei
+  // Datensparmodus). Schlägt das Laden fehl oder blockiert der Browser die Wiedergabe, bleibt die
+  // neutrale Fläche bzw. das optionale Ersatzbild sichtbar. Das Video läuft nur, solange der Hero
+  // sichtbar und der Tab im Vordergrund ist; pause()/play() setzen an derselben Stelle fort.
   const video = document.getElementById('hero-video') as HTMLVideoElement | null;
+  const root = document.getElementById('hero-video-root');
   const hero = video?.closest('section');
-  if (video && hero) {
+  if (video && root && hero) {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const abort = new AbortController();
     const { signal } = abort;
     // Bis der Observer zum ersten Mal meldet, gilt der Hero als sichtbar (Seite startet oben).
     let heroInView = true;
 
-    const markPlaying = () => (video.dataset.playing = 'true');
+    const reveal = () => (video.dataset.ready = 'true');
+    const fail = () => (root.dataset.videoFailed = 'true');
     const sync = () => {
-      const shouldPlay = heroInView && document.visibilityState === 'visible' && !reducedMotion.matches;
+      const shouldPlay =
+        heroInView && document.visibilityState === 'visible' && !reducedMotion.matches && root.dataset.videoFailed !== 'true';
       if (!shouldPlay) {
         if (!video.paused) video.pause();
         return;
@@ -92,8 +126,9 @@ const hasVideo = Boolean(video?.url);
       if (!video.paused) return;
       // Manche Browser (v. a. iOS Safari) brauchen das muted-Property zusätzlich zum Attribut.
       video.muted = true;
-      video.play().catch(() => {
-        // Wiedergabe blockiert (z. B. Stromsparmodus): Vorschaubild bzw. letzter Frame bleibt stehen.
+      video.play().then(reveal, (error: DOMException) => {
+        // AbortError: play() wurde durch ein pause() (z. B. Wegscrollen) abgelöst – kein Fehler.
+        if (error?.name !== 'AbortError') fail();
       });
     };
 
@@ -112,7 +147,11 @@ const hasVideo = Boolean(video?.url);
         : null;
     observer?.observe(hero);
 
-    video.addEventListener('playing', markPlaying, { signal });
+    video.addEventListener('loadeddata', reveal, { signal });
+    video.addEventListener('playing', reveal, { signal });
+    // Ladefehler melden sich am <source>-Element, nicht am Video selbst.
+    video.querySelector('source')?.addEventListener('error', fail, { signal });
+    video.addEventListener('error', fail, { signal });
     document.addEventListener('visibilitychange', sync, { signal });
     reducedMotion.addEventListener('change', sync, { signal });
     // Endgültiges Verlassen der Seite: Observer und Listener aufräumen. Bleibt die Seite im
@@ -127,7 +166,9 @@ const hasVideo = Boolean(video?.url);
       { signal },
     );
 
-    if (!video.paused && video.readyState > 2) markPlaying();
+    // Das Skript läuft erst nach dem Parsen – Frame oder Fehler können schon vorher eingetreten sein.
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) reveal();
+    if (video.error || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) fail();
     sync();
   }
 </script>

@@ -1,0 +1,77 @@
+---
+import type { SocialPlatform } from '../lib/sanity/types';
+
+// Dezente, einfarbige Linien-Icons der Social-Media-Kanäle (Farbe über currentColor). Bewusst ohne
+// Markenfarben, passend zu den übrigen Icons der Website.
+interface Props {
+  platform: SocialPlatform;
+  class?: string;
+}
+
+const { platform, class: className = 'h-5 w-5' } = Astro.props;
+---
+
+<svg
+  viewBox="0 0 24 24"
+  fill="none"
+  class={className}
+  aria-hidden="true"
+  stroke="currentColor"
+  stroke-width="1.6"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  {
+    platform === 'instagram' && (
+      <>
+        <rect x="3.5" y="3.5" width="17" height="17" rx="4.75" />
+        <circle cx="12" cy="12" r="3.9" />
+        <circle cx="17.1" cy="6.9" r="0.4" fill="currentColor" />
+      </>
+    )
+  }
+  {platform === 'facebook' && <path d="M15.5 3.75h-2.1A3.4 3.4 0 0 0 10 7.15v2.85H7.6v3.4H10v6.85h3.4V13.4h2.5l.5-3.4h-3V7.6c0-.5.4-.85.85-.85h1.25Z" />}
+  {
+    platform === 'youtube' && (
+      <>
+        <rect x="2.75" y="5.5" width="18.5" height="13" rx="4" />
+        <path d="m10.25 9.25 4.75 2.75-4.75 2.75Z" fill="currentColor" stroke-width="1.2" />
+      </>
+    )
+  }
+  {
+    platform === 'whatsapp' && (
+      <>
+        <path d="M4.2 19.8 5.3 16a8.25 8.25 0 1 1 2.9 2.8Z" />
+        <path
+          d="M9.4 8.5c.2-.3.4-.35.6-.35h.45c.2 0 .35.1.45.3l.55 1.3c.1.2.05.45-.1.6l-.4.45c-.1.15-.1.35 0 .5a6 6 0 0 0 2.2 2.2c.15.1.35.1.5 0l.45-.4c.15-.15.4-.2.6-.1l1.3.55c.2.1.3.25.3.45v.45c0 .2-.05.4-.35.6-.55.35-1.45.55-2.55.1a8.3 8.3 0 0 1-4.05-4.05c-.45-1.1-.25-2 .1-2.55Z"
+          stroke-width="1.2"
+        />
+      </>
+    )
+  }
+  {
+    platform === 'tiktok' && (
+      <>
+        <path d="M14 3.75v11.1a3.6 3.6 0 1 1-3.6-3.6" />
+        <path d="M14 3.75c.45 2.45 2.05 4 4.6 4.35" />
+      </>
+    )
+  }
+  {
+    platform === 'telegram' && (
+      <>
+        <path d="M20.75 4.25 3.5 11l5.75 2.1 2.1 6.15 3.1-3.9 4.75 3.6Z" />
+        <path d="m9.25 13.1 7.9-5.85" />
+      </>
+    )
+  }
+  {
+    platform === 'other' && (
+      <>
+        <path d="M10 14a4 4 0 0 0 5.66 0l3-3A4 4 0 0 0 13 5.34l-1 1" />
+        <path d="M14 10a4 4 0 0 0-5.66 0l-3 3A4 4 0 0 0 11 18.66l1-1" />
+      </>
+    )
+  }
+</svg>

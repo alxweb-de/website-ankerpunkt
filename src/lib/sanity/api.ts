@@ -2,6 +2,7 @@ import { sanityClient } from './client';
 import { normalizeEvents } from '../events';
 import {
   ABOUT_PAGE_QUERY,
+  CONTACT_PAGE_QUERY,
   ACTIVE_PEOPLE_QUERY,
   EVENTS_QUERY,
   GROUP_BY_SLUG_QUERY,
@@ -19,6 +20,7 @@ import {
 } from './queries';
 import type {
   AboutPage,
+  ContactPage,
   EventRecord,
   GroupDetail,
   GroupSummary,
@@ -42,6 +44,10 @@ export async function getHomePage() {
 
 export async function getAboutPage() {
   return sanityClient.fetch<AboutPage | null>(ABOUT_PAGE_QUERY);
+}
+
+export async function getContactPage() {
+  return sanityClient.fetch<ContactPage | null>(CONTACT_PAGE_QUERY);
 }
 
 export async function getTopicPage(id: string) {

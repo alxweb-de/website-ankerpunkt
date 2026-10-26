@@ -168,6 +168,9 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     socialLinks,
     livestreamUrl,
     "footerLogo": footerLogo${logoImageFragment},
+    "footerSecondaryLogo": footerSecondaryLogo{ asset->{ _id, url, metadata { dimensions { width, height } } }, alt, link },
+    footerNavigation[]{ _key, label, href, isActive },
+    footerVisit,
     footerText,
     legalEntityName,
     legalRepresentative,
@@ -237,7 +240,12 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     livestreamUrl,
     livestreamButtonText,
     livestreamEmbedUrl,
-    livestreamPlatform
+    livestreamPlatform,
+    donationEnabled,
+    donationHeading,
+    donationText,
+    donationButtonText,
+    donationUrl
   }
 `);
 
@@ -406,6 +414,24 @@ export const TOPIC_PAGE_QUERY = defineQuery(/* groq */ `
     "bookCover": bookCover${imageFragment},
     bookPdfUrl,
     bookButtonText,
+    heroSubtitle,
+    "welcomeLogo": welcomeLogo${imageFragment},
+    welcomeHeading,
+    welcomeText,
+    "welcomeImage": welcomeImage${captionedImageFragment},
+    ideaHeading,
+    ideaText,
+    ideaPoints[]{ _key, title, text, icon, "image": image${imageFragment} },
+    joinHeading,
+    joinText,
+    joinButtonText,
+    joinEmail,
+    "joinContactPerson": joinContactPerson->${personFragment},
+    joinMailSubject,
+    joinFallbackLink,
+    galleryVisible,
+    galleryHeading,
+    galleryImages[]${captionedImageFragment},
     contactHeading,
     contactText,
     "contactPerson": contactPerson->${personFragment},
@@ -451,6 +477,28 @@ export const ABOUT_PAGE_QUERY = defineQuery(/* groq */ `
     contactText,
     buttonText,
     buttonLink,
+    "seo": seo${seoFragment},
+    "seoImage": seoImage${imageFragment}
+  }
+`);
+
+export const CONTACT_PAGE_QUERY = defineQuery(/* groq */ `
+  *[_id == "contactPage"][0]{
+    heroEyebrow,
+    heroHeading,
+    heroText,
+    heroBackgroundType,
+    "heroImage": heroImage${imageFragment},
+    "heroVideo": heroVideo${fileFragment},
+    heroPosition,
+    heroOverlay,
+    waysHeading,
+    writeHeading,
+    writeText,
+    writeButtonText,
+    visitHeading,
+    visitButtonText,
+    timesHeading,
     "seo": seo${seoFragment},
     "seoImage": seoImage${imageFragment}
   }

@@ -54,9 +54,10 @@ const hasMore = items.length > safeLimit;
       data-hide-when-empty={hideWhenEmpty ? 'true' : undefined}
     >
       <Container>
-        <SectionHeading heading={heading} text={text} align="center" class="mx-auto" />
+        <SectionHeading heading={heading} text={text} align="center" class="mx-auto" data-fade-up />
 
-        <div class="mx-auto mt-12 max-w-[50rem]">
+        {/* Liste als Ganzes einblenden (nicht je Eintrag – eventExpiry blendet Einträge dynamisch aus). */}
+        <div data-fade-up class="mx-auto mt-12 max-w-[50rem]">
           <ul class="upcoming-events-list" hidden={isEmpty} data-event-items>
             {items.map(({ event, labels }, index) => (
               <li

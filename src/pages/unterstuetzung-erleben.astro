@@ -4,7 +4,6 @@ import Container from '../components/Container.astro';
 import PortableTextContent from '../components/PortableTextContent.astro';
 import PageHero from '../components/PageHero.astro';
 import TopicSection from '../components/TopicSection.astro';
-import FadeUp from '../components/FadeUp.astro';
 import ContactPanel from '../components/ContactPanel.astro';
 import { urlFor } from '../lib/sanity/image';
 import { getSettings, getTopicPage } from '../lib/sanity/api';
@@ -19,7 +18,7 @@ const text = (value: string | undefined) => value?.trim() || undefined;
 
 // 1. Titelbild
 const heroImage = page?.heroImage?.asset ? page.heroImage : undefined;
-const heroVideo = page?.heroBackgroundType === 'video' && heroImage ? page?.heroVideo?.asset : undefined;
+const heroVideo = page?.heroBackgroundType === 'video' ? page?.heroVideo?.asset : undefined;
 const heroEyebrow = text(page?.heroEyebrow);
 // Einzige technische Absicherung: Die Seite braucht immer eine H1 und einen Seitentitel.
 const heroHeading = text(page?.heroHeading) ?? text(page?.heading) ?? 'Unterstützung erleben';
@@ -44,9 +43,7 @@ const ogSource = page?.seoImage?.asset ? page.seoImage : heroImage;
 const ogImage = ogSource ? urlFor(ogSource).width(1200).height(630).fit('crop').auto('format').url() : undefined;
 ---
 
-<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage)} footerBorder={false}>
-  <FadeUp slot="head" />
-
+<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage || heroVideo?.url)} footerBorder={false}>
   {/* 1. Titelbild – sofort sichtbar, kein Scroll-Fade-up. */}
   <PageHero
     eyebrow={heroEyebrow}

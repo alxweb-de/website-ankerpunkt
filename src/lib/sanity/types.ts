@@ -302,6 +302,11 @@ export interface HomePage {
   livestreamButtonText?: string;
   livestreamEmbedUrl?: string;
   livestreamPlatform?: LivestreamPlatform;
+  donationEnabled?: boolean;
+  donationHeading?: string;
+  donationText?: string;
+  donationButtonText?: string;
+  donationUrl?: string;
 }
 
 export interface TopicPageHighlight {
@@ -357,6 +362,25 @@ export interface TopicPage {
   bookCover?: SanityImageData;
   bookPdfUrl?: string;
   bookButtonText?: string;
+  // „Gemeinschaft erleben“
+  heroSubtitle?: string;
+  welcomeLogo?: SanityImageData;
+  welcomeHeading?: string;
+  welcomeText?: PortableTextValue;
+  welcomeImage?: CaptionedImageData;
+  ideaHeading?: string;
+  ideaText?: PortableTextValue;
+  ideaPoints?: IdeaPoint[];
+  joinHeading?: string;
+  joinText?: PortableTextValue;
+  joinButtonText?: string;
+  joinEmail?: string;
+  joinContactPerson?: PersonSummary;
+  joinMailSubject?: string;
+  joinFallbackLink?: string;
+  galleryVisible?: boolean;
+  galleryHeading?: string;
+  galleryImages?: CaptionedImageData[];
   contactHeading?: string;
   contactText?: PortableTextValue;
   contactPerson?: PersonSummary;
@@ -365,6 +389,14 @@ export interface TopicPage {
   buttonLink?: string;
   seo?: SeoData;
   seoImage?: SanityImageData;
+}
+
+export interface IdeaPoint {
+  _key: string;
+  title: string;
+  text?: string;
+  icon?: CoreValueIcon;
+  image?: SanityImageData;
 }
 
 export interface TopicSectionData {
@@ -441,6 +473,21 @@ export interface AboutPage {
   seoImage?: SanityImageData;
 }
 
+export interface FooterLink {
+  _key: string;
+  label?: string;
+  href?: string;
+  isActive?: boolean;
+}
+
+export interface FooterVisit {
+  heading?: string;
+  label?: string;
+  time?: string;
+  linkText?: string;
+  linkHref?: string;
+}
+
 export interface Settings {
   churchName: string;
   tagline?: string;
@@ -461,6 +508,9 @@ export interface Settings {
   socialLinks?: SocialLink[];
   livestreamUrl?: string;
   footerLogo?: SanityImageData;
+  footerSecondaryLogo?: SanityImageData & { link?: string };
+  footerNavigation?: FooterLink[];
+  footerVisit?: FooterVisit;
   footerText?: string;
   legalEntityName?: string;
   legalRepresentative?: string;
@@ -471,4 +521,24 @@ export interface Settings {
   privacyText?: PortableTextValue;
   imprintUrl?: string;
   privacyUrl?: string;
+}
+
+export interface ContactPage {
+  heroEyebrow?: string;
+  heroHeading?: string;
+  heroText?: string;
+  heroBackgroundType?: HeroBackgroundType;
+  heroImage?: SanityImageData;
+  heroVideo?: SanityFileData;
+  heroPosition?: AboutHeroPosition;
+  heroOverlay?: AboutHeroOverlay;
+  waysHeading?: string;
+  writeHeading?: string;
+  writeText?: string;
+  writeButtonText?: string;
+  visitHeading?: string;
+  visitButtonText?: string;
+  timesHeading?: string;
+  seo?: SeoData;
+  seoImage?: SanityImageData;
 }

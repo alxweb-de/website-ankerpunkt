@@ -1,156 +1,168 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Container from '../components/Container.astro';
-import SectionHeading from '../components/SectionHeading.astro';
 import CtaButton from '../components/CtaButton.astro';
-import { SOCIAL_PLATFORM_LABELS } from '../lib/format';
-import { getSettings } from '../lib/sanity/api';
+import PageHero from '../components/PageHero.astro';
+import { buildContactMailto } from '../lib/contact';
+import { urlFor } from '../lib/sanity/image';
+import { getContactPage, getSettings } from '../lib/sanity/api';
+import type { SanityImageData } from '../lib/sanity/types';
 
+const page = await getContactPage();
 const settings = await getSettings();
-const churchName = settings?.churchName ?? 'Ankerpunkt';
-const visitAddress = settings?.visitAddress ?? settings?.address;
-const hasVisitSection = Boolean(
-  settings?.visitHeading || settings?.visitText || settings?.visitNote || visitAddress || settings?.mapsUrl,
-);
+
+// Texte aus dem Dokument „Kontaktseite“; die Kontaktdaten selbst (Anschrift, E-Mail, Kartenlink,
+// Zeiten) zentral aus den Globalen Einstellungen. Jede Angabe erscheint auf dieser Seite genau einmal –
+// die Startseite und der Footer zeigen weiterhin ihre eigenen kompakten Fassungen. Leere Felder blenden
+// den jeweiligen Teil aus; es gibt keine Ersatztexte im Code.
+const text = (value: string | undefined) => value?.trim() || undefined;
+const withAsset = <T extends SanityImageData>(image: T | undefined) => (image?.asset ? image : undefined);
+
+// 1. Titelbereich – ohne Bild der ruhige, warmbeige Titelbereich mit Punktmuster.
+const heroImage = withAsset(page?.heroImage);
+const heroVideo = page?.heroBackgroundType === 'video' ? page?.heroVideo?.asset : undefined;
+// Einzige technische Absicherung: Die Seite braucht immer eine H1 und einen Seitentitel.
+const heroHeading = text(page?.heroHeading) ?? 'Kontakt';
+const heroText = text(page?.heroText);
+
+// 2. Kontaktmöglichkeiten. „Schreib uns“ nur mit gültiger E-Mail (Button) oder Telefonnummer – ohne beides
+// gäbe es keinen Weg, zu schreiben; ein Ersatzlink auf /kontakt würde auf diese Seite selbst zeigen.
+const waysHeading = text(page?.waysHeading);
+const mailHref = buildContactMailto(settings?.email, `Kontaktanfrage über ${text(page?.heroEyebrow) ?? settings?.churchName ?? 'die Website'}`);
+const phone = text(settings?.phone);
+const writeButtonText = mailHref ? text(page?.writeButtonText) : undefined;
+const showWrite = Boolean(mailHref || phone);
+
+const address = settings?.visitAddress?.street ? settings.visitAddress : settings?.address;
+const mapsUrl = text(settings?.mapsUrl);
+const visitButtonText = mapsUrl ? text(page?.visitButtonText) : undefined;
+const showVisit = Boolean(address?.street || visitButtonText);
+const cardCount = Number(showWrite) + Number(showVisit);
+
+// 3. Besuchsinformationen – Gottesdienstzeiten und Hinweis aus den Globalen Einstellungen (Kontaktzeiten).
+const times = (settings?.officeHours ?? []).filter((entry) => text(entry.label) || text(entry.hours));
+const timesHeading = text(page?.timesHeading);
+
+// 4. SEO – eigene Canonical-URL über BaseLayout (sobald SITE_URL gesetzt ist).
+const seoTitle = text(page?.seo?.title);
+const seoDescription = text(page?.seo?.description) ?? heroText;
+const ogSource = withAsset(page?.seoImage) ?? heroImage;
+const ogImage = ogSource ? urlFor(ogSource).width(1200).height(630).fit('crop').auto('format').url() : undefined;
+
+const SECTION_HEADING = 'text-balance text-center font-display text-3xl leading-tight font-medium text-ink sm:text-4xl lg:text-[2.75rem]';
+const CARD = 'flex flex-col items-center rounded-3xl bg-paper-muted px-6 py-10 text-center sm:px-10 sm:py-12';
+const CARD_ICON = 'flex h-12 w-12 items-center justify-center rounded-full bg-paper text-anchor-700 ring-1 ring-anchor-100';
+const CARD_HEADING = 'mt-5 font-display text-2xl font-medium text-ink';
+const BUTTON_SHADOW = 'shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow-[0_10px_24px_-10px_rgba(21,48,46,0.6)]';
 ---
 
-<BaseLayout title="Kontakt" description={`So erreichst du ${churchName} – Adresse, Telefon, E-Mail und Kontaktzeiten.`}>
-  <Container class="py-16 sm:py-20">
-    <SectionHeading eyebrow="Kontakt" heading="Wir freuen uns von dir zu hören" text="Ob Frage, Anliegen oder einfach nur Hallo sagen – melde dich gerne bei uns." />
+<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage || heroVideo?.url)} footerBorder={false}>
+  {/* 1. Titelbereich – sofort sichtbar. */}
+  <PageHero
+    eyebrow={text(page?.heroEyebrow)}
+    heading={heroHeading}
+    text={heroText}
+    image={heroImage}
+    video={heroVideo}
+    position={page?.heroPosition}
+    overlay={page?.heroOverlay}
+  />
 
-    <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {
-        settings?.address && (
-          <div class="rounded-2xl bg-anchor-50/60 p-6">
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Adresse</p>
-            <address class="mt-2 not-italic text-ink">
-              {churchName}<br />
-              {settings.address.street}<br />
-              {settings.address.zip} {settings.address.city}
-            </address>
-            {settings?.mapsUrl && (
-              <a href={settings.mapsUrl} target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-sm font-medium text-anchor-700 hover:text-anchor-900">
-                Route auf Google Maps →
-              </a>
-            )}
-          </div>
-        )
-      }
-
-      {
-        (settings?.phone || settings?.email) && (
-          <div class="rounded-2xl bg-anchor-50/60 p-6">
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Direktkontakt</p>
-            <div class="mt-2 space-y-1 text-ink">
-              {settings?.phone && (
-                <p>
-                  <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class="hover:text-anchor-800">
-                    {settings.phone}
-                  </a>
-                </p>
-              )}
-              {settings?.email && (
-                <p>
-                  <a href={`mailto:${settings.email}`} class="hover:text-anchor-800">
-                    {settings.email}
-                  </a>
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      }
-
-      {
-        settings?.officeHours && settings.officeHours.length > 0 && (
-          <div class="rounded-2xl bg-anchor-50/60 p-6">
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Erreichbarkeit</p>
-            <div class="mt-2 space-y-2 text-ink">
-              {settings.officeHours.map((entry) => (
-                <p>
-                  <span class="block text-sm font-medium">{entry.label}</span>
-                  <span class="text-sm text-ink-soft">{entry.hours}</span>
-                </p>
-              ))}
-            </div>
-          </div>
-        )
-      }
-
-      {
-        settings?.contactPerson && (
-          <div class="rounded-2xl bg-anchor-50/60 p-6">
-            <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Ansprechperson</p>
-            <div class="mt-2 text-ink">
-              <p class="font-medium">{settings.contactPerson.name}</p>
-              {settings.contactPerson.role && <p class="text-sm text-ink-soft">{settings.contactPerson.role}</p>}
-              {settings.contactPerson.email && (
-                <p class="mt-1 text-sm">
-                  <a href={`mailto:${settings.contactPerson.email}`} class="hover:text-anchor-800">
-                    {settings.contactPerson.email}
-                  </a>
-                </p>
-              )}
-              {settings.contactPerson.phone && (
-                <p class="text-sm">
-                  <a href={`tel:${settings.contactPerson.phone.replace(/\s+/g, '')}`} class="hover:text-anchor-800">
-                    {settings.contactPerson.phone}
-                  </a>
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      }
-    </div>
-
-    {
-      settings?.socialLinks && settings.socialLinks.length > 0 && (
-        <div class="mt-12">
-          <p class="text-xs font-medium tracking-wide text-anchor-700 uppercase">Folge uns</p>
-          <ul class="mt-3 flex flex-wrap gap-3">
-            {settings.socialLinks.map((link) => (
-              <li>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center rounded-full bg-anchor-800 px-4 py-2 text-sm font-medium text-paper hover:bg-anchor-700"
-                >
-                  {SOCIAL_PLATFORM_LABELS[link.platform]}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )
-    }
-
-    {
-      hasVisitSection && (
-        <div class="mt-16 rounded-3xl bg-anchor-50 p-8 ring-1 ring-anchor-100 sm:p-10">
-          <SectionHeading
-            eyebrow="Besuch uns"
-            heading={settings?.visitHeading || 'Wir freuen uns auf dich'}
-            text={settings?.visitText}
-          />
-          {visitAddress && (
-            <address class="mt-6 not-italic text-ink">
-              {visitAddress.street}<br />
-              {visitAddress.zip} {visitAddress.city}
-            </address>
+  {/* 2. So erreichst du uns – warmweiß, zwei gleichwertige Bereiche (Smartphone untereinander). */}
+  {
+    cardCount > 0 && (
+      <section class="py-20 sm:py-24">
+        <Container>
+          {waysHeading && (
+            <h2 data-fade-up class={SECTION_HEADING}>
+              {waysHeading}
+            </h2>
           )}
-          {settings?.visitNote && <p class="mt-4 text-ink-soft">{settings.visitNote}</p>}
-          <div class="mt-6 flex flex-wrap gap-4">
-            {settings?.visitButton && (
-              <CtaButton href={settings.visitButton.url}>{settings.visitButton.label}</CtaButton>
+          <div
+            class:list={[
+              'mx-auto grid gap-6 lg:gap-8',
+              cardCount === 2 ? 'max-w-5xl md:grid-cols-2' : 'max-w-xl',
+              waysHeading && 'mt-12 sm:mt-14',
+            ]}
+          >
+            {showWrite && (
+              <div data-fade-up class={CARD}>
+                <span class={CARD_ICON} aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" class="h-5 w-5">
+                    <rect x="2.75" y="4.25" width="14.5" height="11.5" rx="1.75" stroke="currentColor" stroke-width="1.5" />
+                    <path d="m3.5 5.5 6.5 5 6.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                {text(page?.writeHeading) && <h3 class={CARD_HEADING}>{text(page?.writeHeading)}</h3>}
+                {text(page?.writeText) && <p class="mt-3 max-w-sm text-pretty text-lg leading-relaxed text-ink-soft">{text(page?.writeText)}</p>}
+                {phone && (
+                  <a
+                    href={`tel:${phone.replace(/\s+/g, '')}`}
+                    class="mt-4 rounded-sm text-lg font-medium text-anchor-800 underline decoration-anchor-200 underline-offset-4 hover:decoration-anchor-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-700"
+                  >
+                    {phone}
+                  </a>
+                )}
+                {writeButtonText && (
+                  <div class="mt-auto pt-8">
+                    <CtaButton href={mailHref!} size="lg" class={BUTTON_SHADOW}>
+                      {writeButtonText}
+                    </CtaButton>
+                  </div>
+                )}
+              </div>
             )}
-            {settings?.mapsUrl && (
-              <CtaButton href={settings.mapsUrl} variant="secondary">Route planen</CtaButton>
+
+            {showVisit && (
+              <div data-fade-up style={showWrite ? '--fade-up-delay: 100ms' : undefined} class={CARD}>
+                <span class={CARD_ICON} aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" class="h-5 w-5">
+                    <path d="M10 17.5s5.5-4.75 5.5-9a5.5 5.5 0 1 0-11 0c0 4.25 5.5 9 5.5 9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <circle cx="10" cy="8.5" r="2" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </span>
+                {text(page?.visitHeading) && <h3 class={CARD_HEADING}>{text(page?.visitHeading)}</h3>}
+                {address?.street && (
+                  <address class="mt-3 text-lg leading-relaxed not-italic text-ink-soft">
+                    {address.street}
+                    <br />
+                    {address.zip} {address.city}
+                  </address>
+                )}
+                {visitButtonText && (
+                  <div class="mt-auto pt-8">
+                    <CtaButton href={mapsUrl!} size="lg" class={BUTTON_SHADOW}>
+                      {visitButtonText}
+                      <span class="sr-only">(Google Maps, öffnet in neuem Tab)</span>
+                    </CtaButton>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      )
-    }
-  </Container>
+        </Container>
+      </section>
+    )
+  }
+
+  {/* 3. Wann treffen wir uns? – salbeigrün, kompakt und zentriert. */}
+  {
+    times.length > 0 && (
+      <section class="bg-anchor-100/60 py-16 sm:py-20">
+        <Container>
+          <div data-fade-up class="mx-auto max-w-3xl text-center">
+            {timesHeading && <h2 class={SECTION_HEADING}>{timesHeading}</h2>}
+            <ul class:list={['flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center sm:gap-12', timesHeading && 'mt-9 sm:mt-10']}>
+              {times.map((entry) => (
+                <li class="max-w-xs text-lg leading-relaxed">
+                  {text(entry.label) && <span class="block text-ink-soft">{text(entry.label)}</span>}
+                  {text(entry.hours) && <span class="block font-display text-xl font-medium text-anchor-800 sm:text-2xl">{text(entry.hours)}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Container>
+      </section>
+    )
+  }
 </BaseLayout>

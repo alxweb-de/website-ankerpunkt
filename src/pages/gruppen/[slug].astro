@@ -43,7 +43,7 @@ const contactTypeLabels: Record<string, string> = {
       {group.ageGroup && <p class="mt-6 text-sm font-medium text-anchor-600">{group.ageGroup}</p>}
       <h1 class="mt-2 font-display text-3xl font-medium text-ink sm:text-4xl">{group.name}</h1>
 
-      <div class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
+      <div data-fade-up class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
         {
           imageUrl ? (
             <img src={imageUrl} alt={group.image?.alt ?? ''} class="h-full w-full object-cover" />
@@ -98,7 +98,7 @@ const contactTypeLabels: Record<string, string> = {
         )
       }
 
-      {group.contactPerson && <PersonCard person={group.contactPerson} class="mt-10" />}
+      {group.contactPerson && <PersonCard person={group.contactPerson} class="mt-10" data-fade-up />}
     </Container>
   </article>
 </BaseLayout>

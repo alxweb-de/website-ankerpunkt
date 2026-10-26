@@ -6,9 +6,11 @@ import type { PortableTextValue } from '../lib/sanity/types';
 interface Props {
   value: PortableTextValue | undefined;
   class?: string;
+  /** Fade-up beim Scrollen (siehe FadeUp.astro). */
+  'data-fade-up'?: boolean;
 }
 
-const { value, class: className = '' } = Astro.props;
+const { value, class: className = '', 'data-fade-up': fadeUp } = Astro.props;
 
 const components = {
   type: { image: PortableImage },
@@ -17,7 +19,7 @@ const components = {
 
 {
   value && (
-    <div class:list={['prose-ankerpunkt prose max-w-none', className]}>
+    <div class:list={['prose-ankerpunkt prose max-w-none', className]} data-fade-up={fadeUp}>
       <PortableText value={value} components={components} />
     </div>
   )

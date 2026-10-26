@@ -40,7 +40,7 @@ const imageUrl = news.coverImage?.asset ? urlFor(news.coverImage).width(1600).he
       <h1 class="mt-4 font-display text-3xl font-medium text-ink sm:text-4xl">{news.title}</h1>
       <p class="mt-4 text-lg leading-relaxed text-ink-soft">{news.excerpt}</p>
 
-      <div class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
+      <div data-fade-up class="mt-10 aspect-[16/9] overflow-hidden rounded-3xl">
         {
           imageUrl ? (
             <img src={imageUrl} alt={news.coverImage?.alt ?? ''} class="h-full w-full object-cover" />
@@ -50,7 +50,7 @@ const imageUrl = news.coverImage?.asset ? urlFor(news.coverImage).width(1600).he
         }
       </div>
 
-      <PortableTextContent value={news.body} class="mt-10" />
+      <PortableTextContent value={news.body} class="mt-10" data-fade-up />
     </Container>
   </article>
 </BaseLayout>

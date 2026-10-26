@@ -5,9 +5,11 @@ import type { PersonSummary } from '../lib/sanity/types';
 interface Props {
   person: PersonSummary;
   class?: string;
+  /** Fade-up beim Scrollen (siehe FadeUp.astro). */
+  'data-fade-up'?: boolean;
 }
 
-const { person, class: className = '' } = Astro.props;
+const { person, class: className = '', 'data-fade-up': fadeUp } = Astro.props;
 const photoUrl = person.photo?.asset ? urlFor(person.photo).width(160).height(160).fit('crop').url() : null;
 const initials = person.name
   .split(' ')
@@ -16,7 +18,7 @@ const initials = person.name
   .join('');
 ---
 
-<div class:list={['flex items-start gap-4 rounded-2xl bg-anchor-50/60 p-5', className]}>
+<div class:list={['flex items-start gap-4 rounded-2xl bg-anchor-50/60 p-5', className]} data-fade-up={fadeUp}>
   {
     photoUrl ? (
       <img src={photoUrl} alt={person.name} width="56" height="56" class="h-14 w-14 shrink-0 rounded-full object-cover" />

@@ -48,7 +48,7 @@ const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(1600).fi
       <h1 class="mt-4 font-display text-3xl font-medium text-ink sm:text-4xl">{event.title}</h1>
       {event.excerpt && <p class="mt-4 text-lg leading-relaxed text-ink-soft">{event.excerpt}</p>}
 
-      <div class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
+      <div data-fade-up class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
         {
           imageUrl ? (
             <img
@@ -124,13 +124,15 @@ const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(1600).fi
         )
       }
 
-      <PortableTextContent value={event.body} class="mt-10" />
+      <PortableTextContent value={event.body} class="mt-10" data-fade-up />
 
       {
         event.contactPersons && event.contactPersons.length > 0 && (
           <div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {event.contactPersons.map((person) => (
-              <PersonCard person={person} />
+            {event.contactPersons.map((person, index) => (
+              <div data-fade-up style={`--fade-up-delay: ${(index % 2) * 100}ms`}>
+                <PersonCard person={person} class="h-full" />
+              </div>
             ))}
           </div>
         )

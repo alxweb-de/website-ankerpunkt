@@ -20,7 +20,7 @@ const text = (value: string | undefined) => value?.trim() || undefined;
 
 // 1. Titelbild
 const heroImage = about?.heroImage?.asset ? about.heroImage : undefined;
-const heroVideo = about?.heroBackgroundType === 'video' && heroImage ? about?.heroVideo?.asset : undefined;
+const heroVideo = about?.heroBackgroundType === 'video' ? about?.heroVideo?.asset : undefined;
 const heroEyebrow = text(about?.heroEyebrow);
 // Einzige technische Absicherung: Die Seite braucht immer eine H1 und einen Seitentitel.
 const heroHeading = text(about?.heroHeading) ?? 'Über uns';
@@ -80,7 +80,7 @@ const ogImage = ogSource ? urlFor(ogSource).width(1200).height(630).fit('crop').
 const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw';
 ---
 
-<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage)} footerBorder={false}>
+<BaseLayout title={heroHeading} fullTitle={seoTitle} description={seoDescription} ogImage={ogImage} transparentHeader={Boolean(heroImage || heroVideo?.url)} footerBorder={false}>
   {/* 1. Titelbild */}
   <PageHero
     eyebrow={heroEyebrow}
@@ -97,17 +97,19 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     hasWho && (
       <section class="py-20 sm:py-24">
         <Container>
-          <SectionHeading heading={whoHeading} align="center" class="mx-auto" />
-          {whoLead && (
-            <p
-              class:list={[
-                'mx-auto max-w-2xl text-center font-display text-xl leading-snug text-balance text-anchor-700 sm:text-2xl',
-                whoHeading && 'mt-6',
-              ]}
-            >
-              {whoLead}
-            </p>
-          )}
+          <div data-fade-up>
+            <SectionHeading heading={whoHeading} align="center" class="mx-auto" />
+            {whoLead && (
+              <p
+                class:list={[
+                  'mx-auto max-w-2xl text-center font-display text-xl leading-snug text-balance text-anchor-700 sm:text-2xl',
+                  whoHeading && 'mt-6',
+                ]}
+              >
+                {whoLead}
+              </p>
+            )}
+          </div>
 
           {(whoText || groupPhoto) && (
             <div
@@ -116,9 +118,14 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
                 groupPhoto && whoText ? 'grid items-center gap-10 lg:grid-cols-2 lg:gap-16' : 'mx-auto max-w-2xl',
               ]}
             >
-              {groupPhoto && <ContentImage image={groupPhoto} sizes={IMAGE_SIZES} />}
+              {groupPhoto && (
+                <div data-fade-up>
+                  <ContentImage image={groupPhoto} sizes={IMAGE_SIZES} />
+                </div>
+              )}
               {whoText && (
                 <PortableTextContent
+                  data-fade-up
                   value={whoText}
                   class="text-pretty [&_p]:border-l-2 [&_p]:border-sand-300 [&_p]:pl-5 [&_p]:text-lg [&_p]:leading-relaxed sm:[&_p]:pl-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p+p]:mt-8"
                 />
@@ -135,13 +142,17 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     coreValues.length > 0 && (
       <section class="bg-paper-muted py-20 sm:py-24">
         <Container>
-          <SectionHeading heading={valuesHeading} text={valuesText} align="center" class="mx-auto" />
+          <SectionHeading heading={valuesHeading} text={valuesText} align="center" class="mx-auto" data-fade-up />
           <ol class:list={['flex flex-wrap justify-center gap-5 sm:gap-6', (valuesHeading || valuesText) && 'mt-12']}>
             {coreValues.map((value, index) => {
               const imageUrl = value.image?.asset ? urlFor(value.image).width(144).height(144).fit('crop').auto('format').url() : null;
               const hasIcon = !imageUrl && value.icon && value.icon !== 'none';
               return (
-                <li class="relative flex w-full flex-col rounded-3xl bg-paper px-7 pt-7 pb-8 ring-1 ring-ink/5 sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]">
+                <li
+                  data-fade-up
+                  style={`--fade-up-delay: ${(index % 3) * 100}ms`}
+                  class="relative flex w-full flex-col rounded-3xl bg-paper px-7 pt-7 pb-8 ring-1 ring-ink/5 sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]"
+                >
                   <span class="absolute top-5 right-7 font-display text-5xl leading-none font-medium text-sand-300 tabular-nums" aria-hidden="true">
                     {String(index + 1).padStart(2, '0')}
                   </span>
@@ -172,8 +183,9 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     creedItems.length > 0 && (
       <section class="py-20 sm:py-24">
         <Container>
-          <SectionHeading heading={creedHeading} text={creedText} align="center" class="mx-auto" />
-          <div class:list={['mx-auto max-w-3xl space-y-3', (creedHeading || creedText) && 'mt-12']}>
+          <SectionHeading heading={creedHeading} text={creedText} align="center" class="mx-auto" data-fade-up />
+          {/* Die Liste erscheint als Ganzes; beim Aufklappen einzelner Punkte gibt es kein erneutes Fade-up. */}
+          <div data-fade-up class:list={['mx-auto max-w-3xl space-y-3', (creedHeading || creedText) && 'mt-12']}>
             {creedItems.map((item, index) => {
               const verses = item.bibleVerses?.filter((verse) => verse?.trim()) ?? [];
               const hasBody = Boolean(item.body?.length);
@@ -248,12 +260,16 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     hasFreeChurch && (
       <section class="bg-sand-100/60 py-20 sm:py-24">
         <Container>
-          <SectionHeading heading={freeChurchHeading} text={freeChurchIntro} align="center" class="mx-auto max-w-3xl" />
+          <SectionHeading heading={freeChurchHeading} text={freeChurchIntro} align="center" class="mx-auto max-w-3xl" data-fade-up />
 
           {freeChurchPrinciples.length > 0 && (
             <ol class:list={['mx-auto max-w-4xl space-y-3', (freeChurchHeading || freeChurchIntro) && 'mt-12']}>
-              {freeChurchPrinciples.map((principle) => (
-                <li class="rounded-2xl bg-paper px-6 py-5 sm:grid sm:grid-cols-[minmax(0,16.5rem)_1fr] sm:items-baseline sm:gap-8 sm:px-8 sm:py-6">
+              {freeChurchPrinciples.map((principle, index) => (
+                <li
+                  data-fade-up
+                  style={`--fade-up-delay: ${Math.min(index, 2) * 80}ms`}
+                  class="rounded-2xl bg-paper px-6 py-5 sm:grid sm:grid-cols-[minmax(0,16.5rem)_1fr] sm:items-baseline sm:gap-8 sm:px-8 sm:py-6"
+                >
                   <h3 class="font-display text-xl font-medium text-anchor-800 sm:text-2xl">{principle.title}</h3>
                   {principle.text && <p class="mt-1.5 text-pretty leading-relaxed text-ink-soft sm:mt-0 sm:text-lg">{principle.text}</p>}
                 </li>
@@ -269,7 +285,7 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
               ]}
             >
               {hasFreeChurchCopy && (
-                <div>
+                <div data-fade-up>
                   {freeChurchText && (
                     <PortableTextContent
                       value={freeChurchText}
@@ -283,7 +299,11 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
                   )}
                 </div>
               )}
-              {freeChurchImage && <ContentImage image={freeChurchImage} sizes={IMAGE_SIZES} />}
+              {freeChurchImage && (
+                <div data-fade-up style="--fade-up-delay: 100ms">
+                  <ContentImage image={freeChurchImage} sizes={IMAGE_SIZES} />
+                </div>
+              )}
             </div>
           )}
         </Container>
@@ -296,9 +316,9 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     people.length > 0 && (
       <section class="pt-20 sm:pt-24">
         <Container>
-          <SectionHeading heading={peopleHeading} align="center" class="mx-auto" />
+          <SectionHeading heading={peopleHeading} align="center" class="mx-auto" data-fade-up />
           <div class:list={['flex flex-wrap justify-center gap-6', peopleHeading && 'mt-12']}>
-            {people.map((person) => {
+            {people.map((person, index) => {
               const photoUrl = person.photo?.asset ? urlFor(person.photo).width(320).height(320).fit('crop').url() : null;
               const areas = person.responsibleAreas ?? [];
               const hasPersonContact = Boolean(person.email || person.phone);
@@ -308,7 +328,11 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
                 .slice(0, 2)
                 .join('');
               return (
-                <div class="flex w-full flex-col items-center rounded-2xl bg-white p-8 text-center ring-1 ring-anchor-100 sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]">
+                <div
+                  data-fade-up
+                  style={`--fade-up-delay: ${(index % 3) * 100}ms`}
+                  class="flex w-full flex-col items-center rounded-2xl bg-white p-8 text-center ring-1 ring-anchor-100 sm:w-[calc((100%-1.5rem)/2)] lg:w-[calc((100%-3rem)/3)]"
+                >
                   {photoUrl ? (
                     <img src={photoUrl} alt={person.name} width="96" height="96" loading="lazy" class="h-24 w-24 rounded-full object-cover" />
                   ) : (
@@ -347,7 +371,7 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
     hasContact && (
       <section class="py-16 sm:py-20">
         <Container>
-          <div class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-10 text-center sm:px-12 sm:py-12 lg:px-16">
+          <div data-fade-up class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-10 text-center sm:px-12 sm:py-12 lg:px-16">
             <SectionHeading heading={contactHeading} text={contactText} align="center" class="mx-auto" />
             {contactLabel && (
               <div class:list={[(contactHeading || contactText) && 'mt-7']}>

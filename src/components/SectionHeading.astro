@@ -5,13 +5,15 @@ interface Props {
   text?: string;
   align?: 'left' | 'center';
   class?: string;
+  /** Fade-up beim Scrollen (siehe FadeUp.astro). */
+  'data-fade-up'?: boolean;
 }
 
-const { eyebrow, heading, text, align = 'left', class: className = '' } = Astro.props;
+const { eyebrow, heading, text, align = 'left', class: className = '', 'data-fade-up': fadeUp } = Astro.props;
 const centered = align === 'center';
 ---
 
-<div class:list={['max-w-2xl', centered ? 'mx-auto text-center' : '', className]}>
+<div class:list={['max-w-2xl', centered ? 'mx-auto text-center' : '', className]} data-fade-up={fadeUp}>
   {
     eyebrow && (
       <p class:list={['flex items-center gap-2 text-sm font-semibold tracking-wide text-anchor-600 uppercase', centered ? 'justify-center' : '']}>

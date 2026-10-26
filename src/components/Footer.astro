@@ -1,8 +1,9 @@
 ---
 import Container from './Container.astro';
+import SocialIcon from './SocialIcon.astro';
 import { SOCIAL_PLATFORM_LABELS } from '../lib/format';
 import { urlFor } from '../lib/sanity/image';
-import type { Settings } from '../lib/sanity/types';
+import type { SanityImageData, Settings } from '../lib/sanity/types';
 
 interface Props {
   settings: Settings | null;
@@ -15,113 +16,196 @@ const { settings, borderTop = true } = Astro.props;
 const churchName = settings?.churchName ?? 'Ankerpunkt';
 const year = new Date().getFullYear();
 
-// Footer logo falls back to the global header logo, then to the church name as plain text.
-// Build the URL from the asset alone (not the full image value) so no crop/hotspot metadata
-// can ever be applied to the logo.
-const footerLogoImage = settings?.footerLogo?.asset ? settings.footerLogo : settings?.logo;
-const footerLogoUrl = footerLogoImage?.asset ? urlFor(footerLogoImage.asset).height(160).fit('max').url() : null;
-const footerLogoAlt = footerLogoImage?.alt || churchName;
+/** Interne Pfade („/…“) oder vollständige http(s)-Adressen – alles andere wird nicht verlinkt. */
+const isInternal = (href: string) => /^\/(?!\/)/.test(href);
+const isValidHref = (href: string | undefined): href is string =>
+  Boolean(href && (isInternal(href) || /^https?:\/\/\S+$/.test(href)));
+const text = (value: string | undefined) => value?.trim() || undefined;
+
+// Logos: Hauptmarke (EF-Horhausen) größer und zur Startseite verlinkt, ergänzende Marke (Ankerpunkt)
+// kleiner daneben. Beide unabhängig vom Header-Logo in den Globalen Einstellungen → Fußzeile. Die URL
+// entsteht nur aus dem Asset, damit kein Zuschnitt/Hotspot das Logo verändert (fit max: unverzerrt).
+// Ohne Footer-Logo greift das normale Website-Logo, ohne beides der Gemeindename als Text.
+type LogoImage = SanityImageData & { link?: string };
+function logoData(image: LogoImage | undefined, height: number) {
+  if (!image?.asset) return null;
+  const dims = image.asset.metadata?.dimensions;
+  return {
+    src: urlFor(image.asset).height(height * 2).fit('max').url(),
+    width: dims ? Math.round((dims.width / dims.height) * height) : undefined,
+    height,
+    alt: image.alt || churchName,
+  };
+}
+const mainLogo = logoData(settings?.footerLogo?.asset ? settings.footerLogo : settings?.logo, 64);
+const secondaryLogo = logoData(settings?.footerSecondaryLogo, 34);
+const secondaryHref = isValidHref(settings?.footerSecondaryLogo?.link) ? settings!.footerSecondaryLogo!.link : undefined;
+
+// Spalte „Entdecken“: sortierbare Linkliste aus dem CMS; ausgeblendete oder unvollständige Einträge entfallen.
+const navLinks = (settings?.footerNavigation ?? []).filter(
+  (link): link is typeof link & { label: string; href: string } =>
+    link.isActive !== false && Boolean(text(link.label)) && isValidHref(link.href),
+);
+
+// Spalte „Besuch uns“: kompakter Gottesdienst-Hinweis mit Link zur Kontaktseite (Details stehen im
+// Kontaktbereich der Startseite). Die bisherigen Kontaktzeiten bleiben im CMS, werden hier aber nicht wiederholt.
+const visit = settings?.footerVisit;
+const visitHeading = text(visit?.heading);
+const visitLabel = text(visit?.label);
+const visitTime = text(visit?.time);
+const visitLinkText = text(visit?.linkText);
+const visitHref = visitLinkText && isValidHref(visit?.linkHref) ? visit!.linkHref : undefined;
+const hasVisit = Boolean(visitLabel || visitTime || visitHref);
+
+// Social Media: nur tatsächlich hinterlegte Kanäle mit gültiger Adresse.
+const socialLinks = (settings?.socialLinks ?? []).filter((link) => link.platform && /^https?:\/\/\S+$/.test(link.url ?? ''));
 
 const legalLinks = [
   { label: 'Impressum', href: settings?.imprintUrl ?? '/impressum' },
   { label: 'Datenschutz', href: settings?.privacyUrl ?? '/datenschutz' },
 ];
 
-const exploreLinks = [
-  { label: 'Neuigkeiten', href: '/neuigkeiten' },
-  { label: 'Veranstaltungen', href: '/veranstaltungen' },
-  { label: 'Gruppen', href: '/gruppen' },
-  { label: 'Über uns', href: '/ueber-uns' },
-];
+// Ab 960 px vier Spalten (Branding etwas breiter), Tablet zwei Spalten. Smartphone: Branding und
+// Navigation über die volle Breite, „Besuch uns“ und Social Media nebeneinander. Fehlende Spalten
+// verteilen sich auf die übrigen.
+const columnCount = 1 + [navLinks.length > 0, hasVisit, socialLinks.length > 0].filter(Boolean).length;
+const LG_COLUMNS: Record<number, string> = {
+  1: 'min-[960px]:grid-cols-1',
+  2: 'min-[960px]:grid-cols-[1.5fr_1fr]',
+  3: 'min-[960px]:grid-cols-[1.5fr_1fr_1fr]',
+  4: 'min-[960px]:grid-cols-[1.45fr_1fr_1fr_0.85fr]',
+};
 
-const hasOfficeHours = Boolean(settings?.officeHours?.length);
-
-// Einheitliche Footer-Typografie: Spaltenüberschriften klein und gesperrt, Inhalte in gut lesbaren
-// 15 px. Links mit dezentem Hover und deutlich sichtbarem Tastatur-Fokus.
-const headingClass = 'text-[0.8125rem] font-semibold tracking-[0.12em] text-paper uppercase';
-const listClass = 'mt-5 space-y-2.5 text-[0.9375rem] leading-relaxed text-anchor-200';
+// Einheitliche Footer-Typografie: Spaltenüberschriften 13 px gesperrt, Inhalte 15 px. Links mit dezentem
+// Hover und deutlich sichtbarem Tastatur-Fokus.
+const headingClass = 'text-[0.8125rem] font-semibold tracking-[0.14em] text-paper uppercase';
+const bodyClass = 'text-[0.9375rem] leading-relaxed text-anchor-200';
 const linkClass =
   'rounded-sm transition-colors duration-200 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-200';
 ---
 
 <footer class:list={['bg-anchor-900 text-anchor-100', borderTop && 'border-t border-anchor-100']}>
-  {/* Logo-/Anschriftspalte etwas breiter als die Linkspalten, damit das Raster ausgewogen wirkt;
-      fehlt die Erreichbarkeit-Spalte, verteilen sich die übrigen drei Spalten entsprechend. */}
-  <Container
-    class:list={[
-      'grid grid-cols-1 gap-x-10 gap-y-12 py-14 sm:grid-cols-2 sm:py-16',
-      hasOfficeHours ? 'lg:grid-cols-[1.35fr_1fr_1fr_1fr]' : 'lg:grid-cols-[1.35fr_1fr_1fr]',
-    ]}
-  >
-    <div>
+  <Container class="pt-16 pb-12 sm:pt-20 sm:pb-14">
+    {/* Hauptinhalt erscheint einmal per Fade-up; Copyright und rechtliche Links darunter bleiben immer sichtbar. */}
+    <div data-fade-up class:list={['grid grid-cols-[minmax(0,1fr)_auto] gap-x-10 gap-y-12 min-[768px]:grid-cols-2 min-[768px]:gap-x-12 min-[960px]:gap-x-14', LG_COLUMNS[columnCount]]}>
+      {/* 1. Branding und Anschrift */}
+      <div class="col-span-2 md:col-span-1">
+        {
+          mainLogo || secondaryLogo ? (
+            <div class="flex flex-wrap items-center gap-x-7 gap-y-4">
+              {mainLogo && (
+                <a href="/" class:list={[linkClass, 'inline-flex shrink-0']}>
+                  <img src={mainLogo.src} alt={mainLogo.alt} width={mainLogo.width} height={mainLogo.height} class="h-16 w-auto" />
+                </a>
+              )}
+              {secondaryLogo &&
+                (secondaryHref ? (
+                  <a href={secondaryHref} class:list={[linkClass, 'inline-flex shrink-0']}>
+                    <img src={secondaryLogo.src} alt={secondaryLogo.alt} width={secondaryLogo.width} height={secondaryLogo.height} class="h-[2.125rem] w-auto" />
+                  </a>
+                ) : (
+                  <img src={secondaryLogo.src} alt={secondaryLogo.alt} width={secondaryLogo.width} height={secondaryLogo.height} class="h-[2.125rem] w-auto shrink-0" />
+                ))}
+            </div>
+          ) : (
+            <p class="font-display text-xl font-medium text-paper">{churchName}</p>
+          )
+        }
+        {settings?.address && (
+          <address class:list={['mt-7 not-italic', bodyClass]}>
+            {settings.address.street}<br />
+            {settings.address.zip} {settings.address.city}
+          </address>
+        )}
+        {(settings?.phone || settings?.email) && (
+          <ul class:list={['mt-3 space-y-1.5', bodyClass]}>
+            {settings?.phone && (
+              <li><a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class={linkClass}>{settings.phone}</a></li>
+            )}
+            {settings?.email && (
+              <li><a href={`mailto:${settings.email}`} class:list={[linkClass, 'break-all']}>{settings.email}</a></li>
+            )}
+          </ul>
+        )}
+      </div>
+
+      {/* 2. Entdecken */}
       {
-        footerLogoUrl ? (
-          <img src={footerLogoUrl} alt={footerLogoAlt} class="h-12 w-auto max-w-full object-contain sm:h-14" />
-        ) : (
-          <p class="font-display text-xl font-medium text-paper">{churchName}</p>
+        navLinks.length > 0 && (
+          <nav aria-label="Footer-Navigation" class="col-span-2 md:col-span-1">
+            <p class={headingClass}>Entdecken</p>
+            <ul class:list={['mt-5 space-y-3', bodyClass]}>
+              {navLinks.map((link) =>
+                isInternal(link.href) ? (
+                  <li><a href={link.href} class={linkClass}>{link.label}</a></li>
+                ) : (
+                  <li>
+                    <a href={link.href} target="_blank" rel="noopener noreferrer" class={linkClass}>
+                      {link.label}
+                      <span class="sr-only"> (öffnet in neuem Tab)</span>
+                    </a>
+                  </li>
+                ),
+              )}
+            </ul>
+          </nav>
         )
       }
-      {settings?.address && (
-        <address class="mt-6 not-italic text-[0.9375rem] leading-relaxed text-anchor-200">
-          {settings.address.street}<br />
-          {settings.address.zip} {settings.address.city}
-        </address>
-      )}
-      {(settings?.phone || settings?.email) && (
-        <ul class="mt-4 space-y-1.5 text-[0.9375rem] text-anchor-200">
-          {settings?.phone && (
-            <li><a href={`tel:${settings.phone.replace(/\s+/g, '')}`} class={linkClass}>{settings.phone}</a></li>
-          )}
-          {settings?.email && (
-            <li><a href={`mailto:${settings.email}`} class:list={[linkClass, 'break-all']}>{settings.email}</a></li>
-          )}
-        </ul>
-      )}
-    </div>
 
-    <div>
-      <p class={headingClass}>Entdecken</p>
-      <ul class={listClass}>
-        {exploreLinks.map((link) => (
-          <li><a href={link.href} class={linkClass}>{link.label}</a></li>
-        ))}
-      </ul>
-    </div>
+      {/* 3. Besuch uns */}
+      {
+        hasVisit && (
+          <div>
+            {visitHeading && <p class={headingClass}>{visitHeading}</p>}
+            <div class:list={[bodyClass, visitHeading && 'mt-5']}>
+              {visitLabel && <p class="font-medium text-paper">{visitLabel}</p>}
+              {visitTime && <p class:list={[visitLabel && 'mt-0.5']}>{visitTime}</p>}
+              {visitHref && (
+                <a href={visitHref} class:list={[linkClass, 'group mt-4 inline-flex items-center gap-1.5 font-medium whitespace-nowrap text-anchor-100']}>
+                  {visitLinkText}
+                  <svg viewBox="0 0 16 16" fill="none" class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          </div>
+        )
+      }
 
-    {hasOfficeHours && (
-      <div>
-        <p class={headingClass}>Erreichbarkeit</p>
-        <ul class={listClass}>
-          {settings!.officeHours!.map((entry) => (
-            <li>
-              <span class="block font-medium text-anchor-100">{entry.label}</span>
-              <span>{entry.hours}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-
-    <div>
-      <p class={headingClass}>Social Media</p>
-      <ul class={listClass}>
-        {settings?.socialLinks?.map((link) => (
-          <li>
-            <a href={link.url} target="_blank" rel="noopener noreferrer" class={linkClass}>
-              {SOCIAL_PLATFORM_LABELS[link.platform]}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {/* 4. Social Media – nur hinterlegte Kanäle, als dezente Icons. */}
+      {
+        socialLinks.length > 0 && (
+          <div>
+            <p class={headingClass}>Social Media</p>
+            <ul class="mt-5 flex flex-wrap gap-3">
+              {socialLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${SOCIAL_PLATFORM_LABELS[link.platform] ?? 'Social Media'} (öffnet in neuem Tab)`}
+                    class="flex h-11 w-11 items-center justify-center rounded-full text-anchor-100 ring-1 ring-anchor-100/25 transition-colors duration-200 hover:bg-anchor-800 hover:text-paper hover:ring-anchor-100/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-anchor-200"
+                  >
+                    <SocialIcon platform={link.platform} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
     </div>
   </Container>
 
-  <div class="border-t border-anchor-800">
-    <Container class="flex flex-col items-center justify-between gap-3 py-6 text-center text-sm text-anchor-300 sm:flex-row sm:text-left">
+  {/* Unterer Bereich: ohne Trennlinie, nur durch Abstand und eine leicht dunklere Fläche abgesetzt. */}
+  <div class="bg-black/10">
+    <Container class="flex flex-col items-center gap-2 py-5 text-center text-[0.8125rem] leading-relaxed text-anchor-300 sm:flex-row sm:justify-between sm:gap-6 sm:text-left">
       <p>{settings?.footerText ?? `© ${year} ${churchName}`}</p>
-      <ul class="flex gap-6">
+      <ul class="flex gap-2">
         {legalLinks.map((link) => (
-          <li><a href={link.href} class={linkClass}>{link.label}</a></li>
+          <li><a href={link.href} class:list={[linkClass, 'inline-block px-2 py-2 sm:px-1.5']}>{link.label}</a></li>
         ))}
       </ul>
     </Container>

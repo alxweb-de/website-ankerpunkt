@@ -4,21 +4,23 @@ import HeroMedia from './HeroMedia.astro';
 import type { SanityFileData, SanityImageData } from '../lib/sanity/types';
 
 // Titelbild der Unterseiten (Über uns, Themenseiten): Bild oder Video mit Abdunklung, darüber
-// Dachzeile, H1 und Beschreibung. Mit Bild liegt der transparente Header darüber (die Seite setzt
-// dafür `transparentHeader`); ohne Bild erscheint ein ruhiger, heller Titelbereich.
+// Dachzeile, H1 und Beschreibung. Mit Bild bzw. Video liegt der transparente Header darüber (die Seite
+// setzt dafür `transparentHeader`); ohne beides erscheint ein ruhiger, heller Titelbereich.
 interface Props {
   eyebrow?: string;
   heading: string;
+  /** Optionale Zeile direkt unter der H1 (z. B. „Ankerpunkt – Das offene Wohnzimmer“). */
+  subtitle?: string;
   text?: string;
   image?: SanityImageData;
-  /** Nur mit Bild: Das Bild ist Vorschau- und Ersatzbild des Videos. */
+  /** Videomodus: Das Video genügt allein; ein Bild dient dann nur als Ersatzbild (siehe HeroMedia). */
   video?: SanityFileData['asset'];
   /** „auto“ richtet den Ausschnitt am Hotspot aus, sonst eine CSS object-position. */
   position?: string;
   overlay?: 'light' | 'medium' | 'strong';
 }
 
-const { eyebrow, heading, text, image, video, position = 'auto', overlay = 'medium' } = Astro.props;
+const { eyebrow, heading, subtitle, text, image, video, position = 'auto', overlay = 'medium' } = Astro.props;
 
 /** „Automatisch“ richtet den Ausschnitt am Hotspot aus (umgerechnet auf einen evtl. Zuschnitt). */
 function heroObjectPosition(image: SanityImageData, position: string) {
@@ -32,20 +34,27 @@ function heroObjectPosition(image: SanityImageData, position: string) {
   return `${pct(x)} ${pct(y)}`;
 }
 const objectPosition = image ? heroObjectPosition(image, position) : 'center center';
+const hasMedia = Boolean(image || video?.url);
 
 const HERO_OVERLAY_OPACITY = { light: 0.22, medium: 0.36, strong: 0.5 } as const;
 const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.medium;
 ---
 
-<section class:list={['relative flex items-center overflow-hidden', image ? 'min-h-subhero' : 'bg-paper-muted']}>
+<section class:list={['relative flex items-center overflow-hidden', hasMedia ? 'min-h-subhero' : 'bg-paper-muted']}>
   {/* Marker für den Header (siehe Header.astro): transparent über dem Bild, beim Scrollen eingefärbt. */}
-  {image && <div id="hero-scroll-sentinel" class="pointer-events-none absolute top-0 left-0 h-6 w-px" aria-hidden="true" />}
+  {hasMedia && <div id="hero-scroll-sentinel" class="pointer-events-none absolute top-0 left-0 h-6 w-px" aria-hidden="true" />}
 
   <div class="absolute inset-0 z-0">
     {
-      image ? (
+      hasMedia ? (
         <>
-          <HeroMedia image={image} alt={image.alt ?? ''} position={objectPosition} video={video} />
+          <HeroMedia
+            image={video?.url ? undefined : image}
+            video={video?.url ? video : undefined}
+            poster={video?.url ? image : undefined}
+            alt={image?.alt ?? ''}
+            position={objectPosition}
+          />
           {/* Verlauf hinter dem transparenten Header, damit Logo und Navigation lesbar bleiben. */}
           <div
             class="absolute inset-x-0 top-0 h-28 sm:h-32"
@@ -71,7 +80,7 @@ const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.med
   <Container
     class:list={[
       'relative z-10 text-center',
-      image
+      hasMedia
         ? 'pt-[calc(5.5rem+env(safe-area-inset-top,0px))] pb-16 sm:pt-32 sm:pb-20 landscape-short:pt-[calc(5rem+env(safe-area-inset-top,0px))] landscape-short:pb-10'
         : 'py-20 sm:py-28',
     ]}
@@ -82,7 +91,7 @@ const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.med
           <p
             class:list={[
               'mb-4 text-sm font-semibold tracking-[0.16em] uppercase sm:mb-5 sm:text-base landscape-short:mb-3',
-              image ? 'text-paper/85 [text-shadow:0_1px_8px_rgba(20,14,8,0.35)]' : 'text-anchor-600',
+              hasMedia ? 'text-paper/85 [text-shadow:0_1px_8px_rgba(20,14,8,0.35)]' : 'text-anchor-600',
             ]}
           >
             {eyebrow}
@@ -93,17 +102,29 @@ const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.med
         class:list={[
           'text-balance font-display text-5xl leading-[1.1] font-medium tracking-[-0.01em] sm:text-6xl lg:text-7xl',
           'landscape-short:text-5xl',
-          image ? 'text-paper [text-shadow:0_2px_22px_rgba(20,14,8,0.42)]' : 'text-ink',
+          hasMedia ? 'text-paper [text-shadow:0_2px_22px_rgba(20,14,8,0.42)]' : 'text-ink',
         ]}
       >
         {heading}
       </h1>
       {
+        subtitle && (
+          <p
+            class:list={[
+              'mt-4 text-balance font-display text-2xl leading-snug font-normal italic sm:mt-5 sm:text-3xl landscape-short:mt-2 landscape-short:text-xl',
+              hasMedia ? 'text-paper/95 [text-shadow:0_1px_14px_rgba(20,14,8,0.4)]' : 'text-anchor-700',
+            ]}
+          >
+            {subtitle}
+          </p>
+        )
+      }
+      {
         text && (
           <p
             class:list={[
               'mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed sm:mt-8 sm:text-xl landscape-short:mt-4 landscape-short:text-base',
-              image ? 'text-paper/90 [text-shadow:0_1px_10px_rgba(20,14,8,0.35)]' : 'text-ink-soft',
+              hasMedia ? 'text-paper/90 [text-shadow:0_1px_10px_rgba(20,14,8,0.35)]' : 'text-ink-soft',
             ]}
           >
             {text}

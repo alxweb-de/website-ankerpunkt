@@ -16,7 +16,8 @@ const recurringEvents = await getRecurringEvents();
 
     {/* Abgelaufene Termine blendet scripts/eventExpiry.ts auch ohne neuen Build aus. */}
     <div data-event-list>
-      <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" hidden={events.length === 0} data-event-items>
+      {/* Raster als Ganzes einblenden – eventExpiry blendet einzelne Karten dynamisch aus. */}
+      <div data-fade-up class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" hidden={events.length === 0} data-event-items>
         {events.map((event) => (
           <EventCard event={event} />
         ))}
@@ -35,10 +36,14 @@ const recurringEvents = await getRecurringEvents();
             eyebrow="Jede Woche"
             heading="Regelmäßige Veranstaltungen"
             text="Angebote, die regelmäßig stattfinden – für Kinder, Jugendliche und Erwachsene."
+            data-fade-up
           />
           <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {recurringEvents.map((item) => (
-              <RecurringEventCard event={item} />
+            {/* Fade-up auf einem Wrapper je Karte (die Karte selbst hat eigene Hover-Übergänge). */}
+            {recurringEvents.map((item, index) => (
+              <div data-fade-up style={`--fade-up-delay: ${(index % 3) * 100}ms`}>
+                <RecurringEventCard event={item} class="h-full" />
+              </div>
             ))}
           </div>
         </Container>

@@ -15,8 +15,11 @@ const news = await getNewsList();
     {
       news.length > 0 ? (
         <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {news.map((item) => (
-            <NewsCard news={item} />
+          {/* Fade-up auf einem Wrapper je Karte (die Karte selbst hat eigene Hover-Übergänge). */}
+          {news.map((item, index) => (
+            <div data-fade-up style={`--fade-up-delay: ${(index % 3) * 100}ms`}>
+              <NewsCard news={item} class="h-full" />
+            </div>
           ))}
         </div>
       ) : (

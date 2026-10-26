@@ -133,7 +133,7 @@ const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 
       {
         imageUrl && (
-          <div class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
+          <div data-fade-up class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
             <img src={imageUrl} alt={event.coverImage?.alt ?? ''} class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain" />
           </div>
         )
@@ -147,9 +147,9 @@ const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
         )
       }
 
-      {event.body && <PortableTextContent value={event.body} class="mt-10" />}
+      {event.body && <PortableTextContent value={event.body} class="mt-10" data-fade-up />}
 
-      {event.contactPerson && <PersonCard person={event.contactPerson} class="mt-10" />}
+      {event.contactPerson && <PersonCard person={event.contactPerson} class="mt-10" data-fade-up />}
     </Container>
   </article>
 </BaseLayout>

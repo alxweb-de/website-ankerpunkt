@@ -26,17 +26,19 @@ const DEFAULT_CORE_TOPICS: CoreTopic[] = [
 ];
 const coreTopics = homePage?.coreTopics?.length ? homePage.coreTopics : DEFAULT_CORE_TOPICS;
 
-// Bildmodus: das Hero-Hintergrundbild. Videomodus: zuerst das eigene Video-Vorschaubild, sonst
-// ersatzweise das Hero-Hintergrundbild. So gibt es immer ein Bild als unterste, dauerhafte Ebene —
-// das Video (falls vorhanden) spielt rein optisch darüber (siehe Markup weiter unten).
+// Bild- und Videomodus sind unabhängig voneinander (siehe HeroMedia):
+// - Bildmodus: nur das Hero-Hintergrundbild, es wird kein Video geladen.
+// - Videomodus: das Video allein genügt; das Hintergrundbild spielt keine Rolle. Das optionale
+//   Video-Vorschaubild dient nur als Ersatz (Fehler, blockierte Wiedergabe, reduzierte Bewegung).
+//   Ist (noch) kein Video hochgeladen, erscheint ersatzweise das Vorschaubild als Standbild.
 const isVideoMode = homePage?.heroBackgroundType === 'video';
-const heroBaseImage = isVideoMode
-  ? (homePage?.heroVideoPoster?.asset ? homePage.heroVideoPoster : homePage?.heroBackgroundImage)
-  : homePage?.heroBackgroundImage;
-const hasHeroBackground = Boolean(heroBaseImage?.asset);
+const heroVideoAsset = isVideoMode && homePage?.heroBackgroundVideo?.asset?.url ? homePage.heroBackgroundVideo.asset : undefined;
+const heroVideoPoster = isVideoMode && homePage?.heroVideoPoster?.asset ? homePage.heroVideoPoster : undefined;
+const heroStillImage = isVideoMode
+  ? heroVideoAsset ? undefined : heroVideoPoster
+  : homePage?.heroBackgroundImage?.asset ? homePage.heroBackgroundImage : undefined;
+const hasHeroBackground = Boolean(heroVideoAsset || heroStillImage);
 
-const heroVideoAsset = homePage?.heroBackgroundVideo?.asset;
-const hasHeroVideo = isVideoMode && hasHeroBackground && Boolean(heroVideoAsset?.url);
 // Das Video läuft standardmäßig auf allen Bildschirmgrößen. Nur eine ausdrücklich im CMS gesetzte
 // Deaktivierung blendet es auf Smartphones aus — ein fehlender Wert zählt nicht als „deaktiviert“.
 const heroVideoDisableOnMobile = homePage?.heroVideoDisableOnMobile === true;
@@ -132,6 +134,24 @@ const visitAddress = settings?.visitAddress ?? settings?.address;
 // Globalen Einstellungen (Kontakt & Adresse → „E-Mail“). Ohne gültige Adresse wird der Button
 // ausgeblendet, statt einen leeren bzw. kaputten mailto:-Link zu erzeugen.
 const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über ${heroIdentityName}`);
+
+// Spendenbereich in der Kontaktfläche – Texte und Link ausschließlich aus dem CMS (Startseite →
+// „Spendenbereich“). Sichtbar nur, wenn eingeschaltet und mit gültigem http(s)-Link und Beschriftung;
+// sonst erscheint gar nichts (kein funktionsloser Button, keine Ersatzadresse). Nur Weiterleitung zum
+// externen Spendenanbieter, keine Zahlungsdaten auf dieser Website.
+const donationUrl = (() => {
+  const value = homePage?.donationUrl?.trim();
+  if (!value) return undefined;
+  try {
+    return ['https:', 'http:'].includes(new URL(value).protocol) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+const donationHeading = homePage?.donationHeading?.trim() || undefined;
+const donationText = homePage?.donationText?.trim() || undefined;
+const donationButtonText = homePage?.donationButtonText?.trim() || undefined;
+const showDonation = homePage?.donationEnabled === true && Boolean(donationUrl && donationButtonText);
 ---
 
 <BaseLayout title="Willkommen" transparentHeader={hasHeroBackground} footerBorder={false}>
@@ -156,10 +176,11 @@ const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über 
         hasHeroBackground && (
           <>
             <HeroMedia
-              image={heroBaseImage!}
+              image={heroStillImage}
+              video={heroVideoAsset}
+              poster={heroVideoPoster}
               alt={homePage?.heroBackgroundAlt ?? ''}
               position={heroBackgroundPositionStyle}
-              video={hasHeroVideo ? heroVideoAsset : undefined}
               disableVideoOnMobile={heroVideoDisableOnMobile}
             />
             {/* Dezenter dunkler Verlauf exakt hinter dem transparenten Header, damit Logo und
@@ -307,10 +328,14 @@ const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über 
       (max. ca. 670 px Breite) mit jeweils mt-12 Abstand zum folgenden Inhalt. */}
   <section id="kernthemen" class="scroll-mt-20 py-20">
     <Container>
-      <SectionHeading heading={coreTopicsHeading} align="center" class="mx-auto" />
+      <SectionHeading heading={coreTopicsHeading} align="center" class="mx-auto" data-fade-up />
+      {/* Fade-up auf einem Wrapper je Karte: Die Karten haben eigene Hover-Übergänge, die das
+          Fade-up-CSS sonst überschreiben würde. Leicht zeitversetzt (je Reihe 0/100/200 ms). */}
       <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {coreTopics.map((topic) => (
-          <CoreTopicCard topic={topic} class="h-full" />
+        {coreTopics.map((topic, index) => (
+          <div data-fade-up style={`--fade-up-delay: ${(index % 3) * 100}ms`}>
+            <CoreTopicCard topic={topic} class="h-full" />
+          </div>
         ))}
       </div>
     </Container>
@@ -325,11 +350,13 @@ const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über 
             text="Angebote, die regelmäßig stattfinden – für Kinder, Jugendliche und Erwachsene."
             align="center"
             class="mx-auto"
+            data-fade-up
           />
-          <div class="mt-12">
+          {/* Fade-up auf dem äußeren Wrapper – der Slider selbst (Scroll-Track, Pfeile) bleibt unberührt. */}
+          <div class="mt-12" data-fade-up>
             <RecurringEventsSlider events={recurringEvents} />
           </div>
-          <div class="mt-10 text-center">
+          <div class="mt-10 text-center" data-fade-up>
             <CtaButton href="/veranstaltungen" variant="secondary" size="lg" class="max-sm:px-6 max-sm:text-[0.9375rem]">
               Alle regelmäßigen Veranstaltungen
             </CtaButton>
@@ -355,7 +382,7 @@ const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über 
           Bewusst kompakt gehalten, damit der Bereich nicht wie ein eigener großer Seitenabschnitt
           wirkt. Der CMS-Hinweistext (visitNote) wird hier nicht angezeigt — er wiederholt die
           Einladung inhaltlich; das Feld bleibt im CMS erhalten. */}
-      <div class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-9 text-center sm:px-12 lg:px-16">
+      <div data-fade-up class="flex flex-col items-center rounded-3xl bg-anchor-100/70 px-6 py-9 text-center sm:px-12 lg:px-16">
         <SectionHeading
           heading={settings?.visitHeading || 'Wir freuen uns auf dich!'}
           text={
@@ -428,6 +455,43 @@ const contactMailto = buildContactMailto(settings?.email, `Kontaktanfrage über 
             ))
           }
         </ul>
+
+        {/* Spendenbereich: nur durch Weißraum und eine sehr leichte Tonabstufung abgesetzt. Smartphone
+            zentriert und untereinander, ab md Text links und Button rechts. Eigenes Fade-up (der Button
+            selbst behält seine Hover-Übergänge). */}
+        {
+          showDonation && (
+            <div
+              data-fade-up
+              class="mt-8 flex w-full flex-col items-center gap-5 rounded-2xl bg-paper/45 px-5 py-6 text-center sm:px-8 md:flex-row md:justify-between md:gap-10 md:py-7 md:text-left"
+            >
+              {(donationHeading || donationText) && (
+                <div class="max-w-xl">
+                  {donationHeading && <h3 class="font-display text-xl font-medium text-anchor-800 sm:text-2xl">{donationHeading}</h3>}
+                  {donationText && (
+                    <p class:list={['text-pretty leading-relaxed text-ink-soft', donationHeading && 'mt-2']}>{donationText}</p>
+                  )}
+                </div>
+              )}
+              <CtaButton
+                href={donationUrl!}
+                size="lg"
+                class="shrink-0 shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow-[0_10px_24px_-10px_rgba(21,48,46,0.6)]"
+              >
+                <svg viewBox="0 0 20 20" fill="none" class="h-5 w-5" aria-hidden="true">
+                  <path
+                    d="M10 16.5s-6-3.7-6-8.1C4 6.3 5.6 5 7.4 5c1.2 0 2 .6 2.6 1.5.6-.9 1.4-1.5 2.6-1.5C14.4 5 16 6.3 16 8.4c0 4.4-6 8.1-6 8.1Z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                {donationButtonText}
+                <span class="sr-only">(externe Spendenseite, öffnet in neuem Tab)</span>
+              </CtaButton>
+            </div>
+          )
+        }
       </div>
     </Container>
   </section>

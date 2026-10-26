@@ -15,8 +15,11 @@ const groups = await getGroups();
     {
       groups.length > 0 ? (
         <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
-            <GroupCard group={group} />
+          {/* Fade-up auf einem Wrapper je Karte (die Karte selbst hat eigene Hover-Übergänge). */}
+          {groups.map((group, index) => (
+            <div data-fade-up style={`--fade-up-delay: ${(index % 3) * 100}ms`}>
+              <GroupCard group={group} class="h-full" />
+            </div>
           ))}
         </div>
       ) : (

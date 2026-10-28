@@ -1,0 +1,33 @@
+---
+// Dezente Kennzeichnung KI-generierter Bilder („KI-generiertes Bild“ im CMS). Immer sichtbar, ohne
+// Hover, ohne Badge oder Hintergrundfläche.
+// - „overlay“: im Bildbereich unten rechts – nur für Heros, deren Abdunklung die helle Schrift lesbar
+//   hält. Muss in einem positionierten Container liegen; die Lage gibt der Aufrufer über `class`/`style` vor.
+// - „below“: als feine Zeile rechtsbündig direkt unter dem Bild (Karten, Inhalts-, Galerie- und
+//   Fließtextbilder), damit nichts vom Bild verdeckt wird – auch nicht auf hellen Flyern.
+interface Props {
+  variant?: 'overlay' | 'below';
+  class?: string;
+  style?: string;
+}
+
+const { variant = 'below', class: className = '', style } = Astro.props;
+const LABEL = 'Symbolbild · KI-generierte Darstellung';
+---
+
+{
+  variant === 'overlay' ? (
+    <p
+      class:list={[
+        'pointer-events-none absolute z-10 m-0 text-[0.6875rem] leading-none font-medium tracking-[0.04em] select-none sm:text-xs',
+        'text-paper/90 [text-shadow:0_1px_2px_rgba(20,14,8,0.75),0_0_12px_rgba(20,14,8,0.5)]',
+        className,
+      ]}
+      style={style}
+    >
+      {LABEL}
+    </p>
+  ) : (
+    <p class:list={['m-0 mt-2 text-right text-xs leading-snug tracking-[0.02em] text-ink-soft/85', className]}>{LABEL}</p>
+  )
+}

@@ -8,7 +8,8 @@ const imageFragment = /* groq */ `{
   },
   alt,
   hotspot,
-  crop
+  crop,
+  aiGenerated
 }`;
 
 const captionedImageFragment = /* groq */ `{
@@ -20,7 +21,8 @@ const captionedImageFragment = /* groq */ `{
   alt,
   caption,
   hotspot,
-  crop
+  crop,
+  aiGenerated
 }`;
 
 const personFragment = /* groq */ `{
@@ -86,7 +88,8 @@ const recurringEventImageFragment = /* groq */ `{
   hotspot,
   crop,
   displayMode,
-  cropPosition
+  cropPosition,
+  aiGenerated
 }`;
 
 const scheduleEntryFragment = /* groq */ `{
@@ -148,6 +151,9 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     footerNavigation[]{ _key, label, href, isActive },
     footerVisit,
     footerText,
+    footerCreditEnabled,
+    footerCreditLabel,
+    footerCreditUrl,
     imprintText[]{
       ...,
       _type == "image" => ${imageFragment}

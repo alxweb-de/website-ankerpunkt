@@ -1,4 +1,5 @@
 ---
+import AiImageNote from './AiImageNote.astro';
 import Container from './Container.astro';
 import HeroMedia from './HeroMedia.astro';
 import type { SanityFileData, SanityImageData } from '../lib/sanity/types';
@@ -35,6 +36,7 @@ function heroObjectPosition(image: SanityImageData, position: string) {
 }
 const objectPosition = image ? heroObjectPosition(image, position) : 'center center';
 const hasMedia = Boolean(image || video?.url);
+const showAiNote = Boolean(image?.aiGenerated && !video?.url);
 
 const HERO_OVERLAY_OPACITY = { light: 0.22, medium: 0.36, strong: 0.5 } as const;
 const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.medium;
@@ -133,4 +135,7 @@ const overlayOpacity = HERO_OVERLAY_OPACITY[overlay] ?? HERO_OVERLAY_OPACITY.med
       }
     </div>
   </Container>
+
+  {/* KI-Kennzeichnung unten rechts im Bildbereich, außerhalb des zentrierten Textblocks. */}
+  {showAiNote && <AiImageNote variant="overlay" class="right-4 bottom-3 sm:right-6 sm:bottom-4 lg:right-8" />}
 </section>

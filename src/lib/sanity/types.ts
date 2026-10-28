@@ -18,6 +18,8 @@ export interface SanityImageData {
   alt?: string;
   hotspot?: { x: number; y: number; height: number; width: number };
   crop?: { top: number; bottom: number; left: number; right: number };
+  /** Im CMS als „KI-generiertes Bild“ markiert (nur bei redaktionellen Bildfeldern vorhanden). */
+  aiGenerated?: boolean;
 }
 
 export interface SanityFileData {
@@ -463,6 +465,10 @@ export interface Settings {
   footerNavigation?: FooterLink[];
   footerVisit?: FooterVisit;
   footerText?: string;
+  /** Website-Credit „<Bezeichnung>: ALXWEB“ – ohne Angabe eingeschaltet. */
+  footerCreditEnabled?: boolean;
+  footerCreditLabel?: string;
+  footerCreditUrl?: string;
   imprintText?: PortableTextValue;
   privacyText?: PortableTextValue;
   imprintUrl?: string;

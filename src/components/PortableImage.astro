@@ -1,4 +1,5 @@
 ---
+import AiImageNote from './AiImageNote.astro';
 import { urlFor } from '../lib/sanity/image';
 
 const { node } = Astro.props;
@@ -9,6 +10,7 @@ const imageUrl = node?.asset ? urlFor(node).width(1200).height(720).fit('crop').
   imageUrl && (
     <figure class="not-prose my-8">
       <img src={imageUrl} alt={node.alt ?? ''} loading="lazy" class="w-full rounded-2xl" />
+      {node.aiGenerated && <AiImageNote />}
     </figure>
   )
 }

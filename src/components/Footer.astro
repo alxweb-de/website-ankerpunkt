@@ -60,9 +60,16 @@ const hasVisit = Boolean(visitLabel || visitTime || visitHref);
 // Social Media: nur tatsächlich hinterlegte Kanäle mit gültiger Adresse.
 const socialLinks = (settings?.socialLinks ?? []).filter((link) => link.platform && /^https?:\/\/\S+$/.test(link.url ?? ''));
 
+// Website-Credit: Leere Felder entsprechen den Standardwerten im CMS (eingeschaltet, „Webdesign &
+// Entwicklung“), da das bestehende Einstellungsdokument die neuen Felder noch nicht enthält.
+const showCredit = settings?.footerCreditEnabled !== false;
+const creditLabel = text(settings?.footerCreditLabel) ?? 'Webdesign & Entwicklung';
+const creditUrl = /^https?:\/\/\S+$/.test(settings?.footerCreditUrl ?? '') ? settings!.footerCreditUrl : undefined;
+
 const legalLinks = [
   { label: 'Impressum', href: settings?.imprintUrl ?? '/impressum' },
   { label: 'Datenschutz', href: settings?.privacyUrl ?? '/datenschutz' },
+  { label: 'Bildnachweise & KI-Inhalte', href: '/bildnachweise' },
 ];
 
 // Ab 960 px vier Spalten (Branding etwas breiter), Tablet zwei Spalten. Smartphone: Branding und
@@ -203,8 +210,24 @@ const linkClass =
   {/* Unterer Bereich: ohne Trennlinie, nur durch Abstand und eine leicht dunklere Fläche abgesetzt. */}
   <div class="bg-black/10">
     <Container class="flex flex-col items-center gap-2 py-5 text-center text-[0.8125rem] leading-relaxed text-anchor-300 sm:flex-row sm:justify-between sm:gap-6 sm:text-left">
-      <p>{settings?.footerText ?? `© ${year} ${churchName}`}</p>
-      <ul class="flex gap-2">
+      <div class="flex flex-col items-center gap-1 sm:items-start">
+        <p>{settings?.footerText ?? `© ${year} ${churchName}`}</p>
+        {
+          showCredit && (
+            <p>
+              {creditLabel}:{' '}
+              {creditUrl ? (
+                <a href={creditUrl} target="_blank" rel="noopener noreferrer" class:list={[linkClass, 'font-semibold tracking-[0.04em] text-anchor-100']}>
+                  ALXWEB<span class="sr-only"> (öffnet in neuem Tab)</span>
+                </a>
+              ) : (
+                <span class="font-semibold tracking-[0.04em] text-anchor-100">ALXWEB</span>
+              )}
+            </p>
+          )
+        }
+      </div>
+      <ul class="flex flex-wrap justify-center gap-x-2 sm:justify-end">
         {legalLinks.map((link) => (
           <li><a href={link.href} class:list={[linkClass, 'inline-block px-2 py-2 sm:px-1.5']}>{link.label}</a></li>
         ))}

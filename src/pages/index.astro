@@ -7,6 +7,7 @@ import CoreTopicCard from '../components/CoreTopicCard.astro';
 import RecurringEventsSlider from '../components/RecurringEventsSlider.astro';
 import UpcomingEventsSection from '../components/UpcomingEventsSection.astro';
 import HeroMedia from '../components/HeroMedia.astro';
+import AiImageNote from '../components/AiImageNote.astro';
 import { buildContactMailto } from '../lib/contact';
 import { getHomePage, getRecurringEvents, getSettings, getUpcomingEvents } from '../lib/sanity/api';
 import type { CoreTopic } from '../lib/sanity/types';
@@ -38,6 +39,8 @@ const heroStillImage = isVideoMode
   ? heroVideoAsset ? undefined : heroVideoPoster
   : homePage?.heroBackgroundImage?.asset ? homePage.heroBackgroundImage : undefined;
 const hasHeroBackground = Boolean(heroVideoAsset || heroStillImage);
+// KI-Kennzeichnung nur, wenn das Bild selbst zu sehen ist (nicht hinter einem laufenden Video).
+const showHeroAiNote = Boolean(heroStillImage?.aiGenerated && !heroVideoAsset);
 
 // Das Video läuft standardmäßig auf allen Bildschirmgrößen. Nur eine ausdrücklich im CMS gesetzte
 // Deaktivierung blendet es auf Smartphones aus — ein fehlender Wert zählt nicht als „deaktiviert“.
@@ -297,6 +300,18 @@ const showDonation = homePage?.donationEnabled === true && Boolean(donationUrl &
         </div>
       </div>
     </div>
+
+    {/* KI-Kennzeichnung unten rechts im Bildbereich – oberhalb des hellen Übergangs, damit sie lesbar bleibt
+        und weder Text noch Scroll-Pfeil (Mitte) überdeckt. */}
+    {
+      showHeroAiNote && (
+        <AiImageNote
+          variant="overlay"
+          class="right-4 bottom-[var(--ai-note-bottom)] max-sm:bottom-[6.75rem] sm:right-6 lg:right-8"
+          style={`--ai-note-bottom: ${heroShowBottomFade ? Math.round(heroBottomFadeHeight * 0.75) : 16}px;`}
+        />
+      )
+    }
 
     {/* Scroll-Pfeil horizontal zentriert über inset-x-0 + mx-auto statt left-1/2 + translate: so kann
         die Wipp-Animation (transform) die Zentrierung nicht verschieben. */}

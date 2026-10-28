@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Container from '../../components/Container.astro';
+import AiImageNote from '../../components/AiImageNote.astro';
 import PlaceholderImage from '../../components/PlaceholderImage.astro';
 import PortableTextContent from '../../components/PortableTextContent.astro';
 import PersonCard from '../../components/PersonCard.astro';
@@ -51,11 +52,14 @@ const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(1600).fi
       <div data-fade-up class="mt-10 overflow-hidden rounded-3xl bg-anchor-50/60 p-3 sm:p-4">
         {
           imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={event.mainImage?.alt ?? ''}
-              class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain"
-            />
+            <>
+              <img
+                src={imageUrl}
+                alt={event.mainImage?.alt ?? ''}
+                class="mx-auto max-h-[70vh] w-auto rounded-2xl object-contain"
+              />
+              {event.mainImage?.aiGenerated && <AiImageNote class="px-1" />}
+            </>
           ) : (
             <div class="aspect-[16/9] overflow-hidden rounded-2xl">
               <PlaceholderImage class="h-full w-full" label={event.title} />

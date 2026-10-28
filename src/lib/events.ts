@@ -1,5 +1,5 @@
 import { buildEventSlug, eventSlugSuffix } from './eventSlug';
-import { berlinDateKey, berlinTimeKey, berlinWallTimeToDate, endOfBerlinDay } from './format';
+import { berlinDateKey, berlinTimeKey, berlinWallTimeToDate, endOfBerlinDay, portableTextToPlainText } from './format';
 import type { EventItem, EventRecord } from './sanity/types';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -68,6 +68,7 @@ export function normalizeEvents(records: EventRecord[]): EventItem[] {
       visibleUntil: (end ?? endOfBerlinDay(date)).getTime(),
       status: record.status,
       coverImage: record.coverImage?.asset ? record.coverImage : undefined,
+      description: portableTextToPlainText(record.description) ? record.description : undefined,
       excerpt: record.excerpt?.trim() || undefined,
       body: record.body?.length ? record.body : undefined,
       location: record.location?.trim() || undefined,

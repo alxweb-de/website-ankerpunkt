@@ -8,9 +8,24 @@ interface Props {
   class?: string;
   /** Fade-up beim Scrollen (siehe FadeUp.astro). */
   'data-fade-up'?: boolean;
+  /**
+   * „legal“: Typografie für lange Rechtstexte (Impressum, Datenschutz) – Überschriften in der
+   * Serifenschrift, Links in der Markenfarbe, ruhigere Zeilenhöhe. Alles aus den Design-Tokens,
+   * damit im CMS nur die Textstruktur gepflegt werden muss.
+   */
+  variant?: 'default' | 'legal';
 }
 
-const { value, class: className = '', 'data-fade-up': fadeUp } = Astro.props;
+const { value, class: className = '', 'data-fade-up': fadeUp, variant = 'default' } = Astro.props;
+
+const LEGAL_TYPOGRAPHY = [
+  'prose-headings:font-display prose-headings:font-medium prose-headings:text-ink',
+  'prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-2xl sm:prose-h2:text-[1.75rem] prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-xl',
+  'prose-p:text-ink-soft prose-p:leading-[1.75] prose-li:text-ink-soft prose-li:leading-[1.7] prose-strong:text-ink',
+  'prose-a:font-medium prose-a:text-anchor-700 prose-a:underline-offset-[3px] prose-a:decoration-anchor-300 hover:prose-a:text-anchor-900 hover:prose-a:decoration-anchor-700',
+  'prose-a:break-words prose-a:rounded-sm focus-visible:prose-a:outline-2 focus-visible:prose-a:outline-offset-2 focus-visible:prose-a:outline-anchor-600',
+  'sm:prose-lg [&>:first-child]:mt-0',
+].join(' ');
 
 const components = {
   type: { image: PortableImage },
@@ -19,7 +34,7 @@ const components = {
 
 {
   value && (
-    <div class:list={['prose-ankerpunkt prose max-w-none', className]} data-fade-up={fadeUp}>
+    <div class:list={['prose-ankerpunkt prose max-w-none', variant === 'legal' && LEGAL_TYPOGRAPHY, className]} data-fade-up={fadeUp}>
       <PortableText value={value} components={components} />
     </div>
   )

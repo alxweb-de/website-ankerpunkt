@@ -39,6 +39,8 @@ export interface SeoData {
 }
 
 export interface Address {
+  /** Nur in `settings.address` gepflegt. */
+  organizationName?: string;
   street: string;
   zip: string;
   city: string;
@@ -65,15 +67,6 @@ export interface SocialLink {
   url: string;
 }
 
-export type ContactOptionType = 'email' | 'phone' | 'whatsapp' | 'link' | 'other';
-
-export interface ContactOption {
-  _key: string;
-  type: ContactOptionType;
-  label?: string;
-  value: string;
-}
-
 export type Weekday =
   | 'monday'
   | 'tuesday'
@@ -82,12 +75,6 @@ export type Weekday =
   | 'friday'
   | 'saturday'
   | 'sunday';
-
-export interface WeeklySchedule {
-  weekday: Weekday;
-  time: string;
-  location?: string;
-}
 
 export interface PersonSummary {
   _id: string;
@@ -99,12 +86,6 @@ export interface PersonSummary {
   responsibleAreas?: string[];
   isActive?: boolean;
   order?: number;
-}
-
-export interface NewsCategory {
-  _id: string;
-  title: string;
-  slug: SanitySlug;
 }
 
 export type EventStatus = 'planned' | 'soldOut' | 'cancelled';
@@ -130,6 +111,8 @@ export interface EventRecord {
   time?: string;
   /** „Uhrzeit bis“ (optional): Ende am selben Tag, „HH:MM“. */
   endTime?: string;
+  /** „Beschreibung der Veranstaltung“: Rich Text (Absätze, H2/H3, Listen, Fett/Kursiv, Links). */
+  description?: PortableTextValue;
   startDateTime?: string;
   endDateTime?: string;
   coverImage?: EventImage;
@@ -161,44 +144,13 @@ export interface EventItem {
   visibleUntil: number;
   status?: EventStatus;
   coverImage?: EventImage;
+  description?: PortableTextValue;
   excerpt?: string;
   body?: PortableTextValue;
   location?: string;
   targetAudience?: string;
   registrationLink?: string;
   contactPerson?: PersonSummary;
-}
-
-export interface NewsSummary {
-  _id: string;
-  title: string;
-  slug: SanitySlug;
-  coverImage?: SanityImageData;
-  excerpt: string;
-  publishedAt: string;
-  category?: NewsCategory;
-  isFeatured?: boolean;
-}
-
-export interface NewsDetail extends NewsSummary {
-  body?: PortableTextValue;
-  seo?: SeoData;
-}
-
-export interface GroupSummary {
-  _id: string;
-  name: string;
-  slug: SanitySlug;
-  image?: SanityImageData;
-  ageGroup?: string;
-  description?: string;
-  schedule?: WeeklySchedule;
-  isActive?: boolean;
-}
-
-export interface GroupDetail extends GroupSummary {
-  contactPerson?: PersonSummary;
-  contactOptions?: ContactOption[];
 }
 
 export type ImageDisplayMode = 'contain' | 'cover';
@@ -292,7 +244,6 @@ export interface HomePage {
   upcomingEventsText?: string;
   upcomingEventsLimit?: number;
   upcomingEventsHideWhenEmpty?: boolean;
-  featuredNews?: NewsSummary[];
   featuredEvents?: EventRecord[];
   livestreamVisible?: boolean;
   livestreamEyebrow?: string;
@@ -512,11 +463,6 @@ export interface Settings {
   footerNavigation?: FooterLink[];
   footerVisit?: FooterVisit;
   footerText?: string;
-  legalEntityName?: string;
-  legalRepresentative?: string;
-  legalAddress?: Address;
-  legalEmail?: string;
-  legalPhone?: string;
   imprintText?: PortableTextValue;
   privacyText?: PortableTextValue;
   imprintUrl?: string;

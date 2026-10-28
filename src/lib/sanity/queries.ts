@@ -47,8 +47,6 @@ const fileFragment = /* groq */ `{
 
 const seoFragment = /* groq */ `{ title, description }`;
 
-const newsCategoryFragment = /* groq */ `{ _id, title, slug }`;
-
 const eventImageFragment = /* groq */ `{
   asset->{
     _id,
@@ -76,28 +74,6 @@ const eventFragment = /* groq */ `{
   targetAudience,
   registrationLink,
   status
-}`;
-
-const newsSummaryFragment = /* groq */ `{
-  _id,
-  title,
-  slug,
-  "coverImage": coverImage${imageFragment},
-  excerpt,
-  publishedAt,
-  "category": category->${newsCategoryFragment},
-  isFeatured
-}`;
-
-const groupSummaryFragment = /* groq */ `{
-  _id,
-  name,
-  slug,
-  "image": image${imageFragment},
-  ageGroup,
-  description,
-  schedule,
-  isActive
 }`;
 
 const recurringEventImageFragment = /* groq */ `{
@@ -172,11 +148,6 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     footerNavigation[]{ _key, label, href, isActive },
     footerVisit,
     footerText,
-    legalEntityName,
-    legalRepresentative,
-    legalAddress,
-    legalEmail,
-    legalPhone,
     imprintText[]{
       ...,
       _type == "image" => ${imageFragment}
@@ -231,7 +202,6 @@ export const HOME_PAGE_QUERY = defineQuery(/* groq */ `
     upcomingEventsText,
     upcomingEventsLimit,
     upcomingEventsHideWhenEmpty,
-    "featuredNews": featuredNews[]->${newsSummaryFragment},
     "featuredEvents": featuredEvents[]->${eventFragment},
     livestreamVisible,
     livestreamEyebrow,
@@ -261,6 +231,7 @@ export const EVENTS_QUERY = defineQuery(/* groq */ `
     date,
     time,
     endTime,
+    description,
     startDateTime,
     endDateTime,
     "coverImage": coverImage${eventImageFragment},
@@ -275,55 +246,6 @@ export const EVENTS_QUERY = defineQuery(/* groq */ `
     "contactPerson": contactPerson->${personFragment},
     status
   }
-`);
-
-export const NEWS_LIST_QUERY = defineQuery(/* groq */ `
-  *[_type == "newsPost" && publishedAt <= now() && (!defined(expiresAt) || expiresAt > now())] | order(publishedAt desc)${newsSummaryFragment}
-`);
-
-export const NEWS_BY_SLUG_QUERY = defineQuery(/* groq */ `
-  *[_type == "newsPost" && slug.current == $slug][0]{
-    _id,
-    title,
-    slug,
-    "coverImage": coverImage${imageFragment},
-    excerpt,
-    body[]{
-      ...,
-      _type == "image" => ${imageFragment}
-    },
-    publishedAt,
-    "category": category->${newsCategoryFragment},
-    isFeatured,
-    "seo": seo${seoFragment}
-  }
-`);
-
-export const NEWS_SLUGS_QUERY = defineQuery(/* groq */ `
-  *[_type == "newsPost" && defined(slug.current)]{ "slug": slug.current }
-`);
-
-export const GROUPS_QUERY = defineQuery(/* groq */ `
-  *[_type == "group" && isActive == true] | order(name asc)${groupSummaryFragment}
-`);
-
-export const GROUP_BY_SLUG_QUERY = defineQuery(/* groq */ `
-  *[_type == "group" && slug.current == $slug][0]{
-    _id,
-    name,
-    slug,
-    "image": image${imageFragment},
-    ageGroup,
-    description,
-    schedule,
-    "contactPerson": contactPerson->${personFragment},
-    contactOptions,
-    isActive
-  }
-`);
-
-export const GROUP_SLUGS_QUERY = defineQuery(/* groq */ `
-  *[_type == "group" && defined(slug.current)]{ "slug": slug.current }
 `);
 
 export const RECURRING_EVENTS_QUERY = defineQuery(/* groq */ `

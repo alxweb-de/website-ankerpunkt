@@ -1,4 +1,4 @@
-import type { EventStatus, RecurringEventSummary, ScheduleEntry, SocialPlatform, Weekday } from './sanity/types';
+import type { EventStatus, PortableTextValue, RecurringEventSummary, ScheduleEntry, SocialPlatform, Weekday } from './sanity/types';
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit',
@@ -256,4 +256,18 @@ export function formatEventDate(event: { date: string; time?: string; end?: stri
     timeLabel,
     weekdayTimeLabel: timeLabel ? `${weekday} · ${timeLabel}` : weekday,
   };
+}
+
+/** Reiner Text aus Portable Text (z. B. für Meta-Beschreibungen): Textblöcke mit Leerzeichen verbunden, ohne Formatierung. */
+export function portableTextToPlainText(value: PortableTextValue | undefined): string {
+  if (!value) return '';
+  return value
+    .map((block) =>
+      block._type === 'block' && Array.isArray(block.children)
+        ? block.children.map((child) => (typeof child.text === 'string' ? child.text : '')).join('')
+        : '',
+    )
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

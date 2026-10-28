@@ -6,7 +6,7 @@ import StatusBadge from '../../components/StatusBadge.astro';
 import PersonCard from '../../components/PersonCard.astro';
 import CtaButton from '../../components/CtaButton.astro';
 import { urlFor } from '../../lib/sanity/image';
-import { formatEventDate, toBerlinIsoString } from '../../lib/format';
+import { formatEventDate, portableTextToPlainText, toBerlinIsoString } from '../../lib/format';
 import { getEvents, getSettings } from '../../lib/sanity/api';
 import type { EventItem } from '../../lib/sanity/types';
 
@@ -27,13 +27,18 @@ const isBookable = event.status !== 'cancelled' && event.status !== 'soldOut' &&
 const isPast = event.visibleUntil <= Date.now();
 
 // SEO – ausschließlich aus vorhandenen Angaben erzeugt, nichts wird ergänzt oder geschätzt.
+// Reihenfolge der Textquelle: Kurzbeschreibung (Altdaten) → „Beschreibung der Veranstaltung“ als
+// reiner Text → neutraler Hinweis. truncate() kürzt an einer Wortgrenze; da es reiner Text ist,
+// entstehen keine abgeschnittenen HTML-Tags.
+const descriptionText = portableTextToPlainText(event.description);
+const summaryText = event.excerpt || descriptionText;
 const seoTitle = `${event.title} am ${labels.shortDate} | ${siteName}`;
 const seoDescription = truncate(
   [
     // Gleiche Zeitangabe wie auf der Seite: „10:30 Uhr“ bzw. „10:30–11:30 Uhr“.
     `${event.title} am ${labels.fullDate}${labels.timeLabel ? `, ${labels.timeLabel}` : ''}`,
     event.location ? ` in ${event.location}` : '',
-    `. ${event.excerpt ? event.excerpt.replace(/([^.!?…])$/, '$1.') : `Alle Infos zum Termin bei ${siteName}.`}`,
+    `. ${summaryText ? summaryText.replace(/([^.!?…])$/, '$1.') : `Alle Infos zum Termin bei ${siteName}.`}`,
   ].join(''),
   160,
 );
@@ -65,7 +70,7 @@ const jsonLd = {
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: { '@type': 'Place', name: event.location, address: event.location },
   }),
-  ...(event.excerpt && { description: event.excerpt }),
+  ...(summaryText && { description: truncate(summaryText, 300) }),
   ...(imageUrl && { image: [imageUrl] }),
   ...(canonicalUrl && { url: canonicalUrl }),
   organizer: {
@@ -128,6 +133,16 @@ const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
       >
         Diese Veranstaltung hat bereits stattgefunden.
       </p>
+
+      {/* Ausführliche Beschreibung – ohne Inhalt entfällt der Bereich vollständig. Eigene Begrenzung auf
+          eine angenehme Zeilenlänge, da der Container hier breiter ausfällt als für Fließtext ideal. */}
+      {
+        event.description && (
+          <div data-fade-up class="mt-10 max-w-2xl">
+            <PortableTextContent value={event.description} />
+          </div>
+        )
+      }
 
       {event.excerpt && <p class="mt-8 text-lg leading-relaxed text-ink-soft">{event.excerpt}</p>}
 

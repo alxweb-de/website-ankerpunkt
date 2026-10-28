@@ -34,6 +34,8 @@ const writeButtonText = mailHref ? text(page?.writeButtonText) : undefined;
 const showWrite = Boolean(mailHref || phone);
 
 const address = settings?.visitAddress?.street ? settings.visitAddress : settings?.address;
+// Organisationsname immer aus der zentralen Kontaktadresse – auch wenn eine abweichende Besuchsadresse gesetzt ist.
+const organizationName = text(settings?.address?.organizationName);
 const mapsUrl = text(settings?.mapsUrl);
 const visitButtonText = mapsUrl ? text(page?.visitButtonText) : undefined;
 const showVisit = Boolean(address?.street || visitButtonText);
@@ -124,6 +126,12 @@ const BUTTON_SHADOW = 'shadow-[0_6px_18px_-8px_rgba(21,48,46,0.55)] hover:shadow
                 {text(page?.visitHeading) && <h3 class={CARD_HEADING}>{text(page?.visitHeading)}</h3>}
                 {address?.street && (
                   <address class="mt-3 text-lg leading-relaxed not-italic text-ink-soft">
+                    {organizationName && (
+                      <>
+                        {organizationName}
+                        <br />
+                      </>
+                    )}
                     {address.street}
                     <br />
                     {address.zip} {address.city}

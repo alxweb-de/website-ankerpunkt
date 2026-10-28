@@ -5,13 +5,7 @@ import {
   CONTACT_PAGE_QUERY,
   ACTIVE_PEOPLE_QUERY,
   EVENTS_QUERY,
-  GROUP_BY_SLUG_QUERY,
-  GROUP_SLUGS_QUERY,
-  GROUPS_QUERY,
   HOME_PAGE_QUERY,
-  NEWS_BY_SLUG_QUERY,
-  NEWS_LIST_QUERY,
-  NEWS_SLUGS_QUERY,
   RECURRING_EVENT_BY_SLUG_QUERY,
   RECURRING_EVENT_SLUGS_QUERY,
   RECURRING_EVENTS_QUERY,
@@ -22,11 +16,7 @@ import type {
   AboutPage,
   ContactPage,
   EventRecord,
-  GroupDetail,
-  GroupSummary,
   HomePage,
-  NewsDetail,
-  NewsSummary,
   PersonSummary,
   RecurringEventDetail,
   RecurringEventSummary,
@@ -62,30 +52,6 @@ export async function getEvents() {
 /** Kommende Veranstaltungen: Termine, deren Tag (bzw. bei Altdaten deren Ende) noch nicht vorbei ist. */
 export async function getUpcomingEvents(now = Date.now()) {
   return (await getEvents()).filter((event) => event.visibleUntil > now);
-}
-
-export async function getNewsList() {
-  return sanityClient.fetch<NewsSummary[]>(NEWS_LIST_QUERY);
-}
-
-export async function getNewsBySlug(slug: string) {
-  return sanityClient.fetch<NewsDetail | null>(NEWS_BY_SLUG_QUERY, { slug });
-}
-
-export async function getNewsSlugs() {
-  return sanityClient.fetch<{ slug: string }[]>(NEWS_SLUGS_QUERY);
-}
-
-export async function getGroups() {
-  return sanityClient.fetch<GroupSummary[]>(GROUPS_QUERY);
-}
-
-export async function getGroupBySlug(slug: string) {
-  return sanityClient.fetch<GroupDetail | null>(GROUP_BY_SLUG_QUERY, { slug });
-}
-
-export async function getGroupSlugs() {
-  return sanityClient.fetch<{ slug: string }[]>(GROUP_SLUGS_QUERY);
 }
 
 export async function getRecurringEvents() {

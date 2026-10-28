@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import { loadEnv } from 'vite';
 import sanityDevRefresh from './integrations/sanity-dev-refresh.mjs';
+import sanityLocalMedia from './integrations/sanity-local-media.mjs';
 
 // Live-Domain für Canonical-URLs und strukturierte Daten, z. B. SITE_URL=https://www.example.de
 // (in .env bzw. in den Umgebungsvariablen des Hostings). Ohne Angabe entfallen diese absoluten URLs.
@@ -21,6 +22,8 @@ export default defineConfig({
       dataset: PUBLIC_SANITY_DATASET,
       apiVersion: PUBLIC_SANITY_API_VERSION,
     }),
+    // Nur im Build: Bilder, Logos und Videos aus Sanity werden lokal mit ausgeliefert (siehe Datei).
+    sanityLocalMedia(),
   ],
   vite: {
     plugins: [tailwindcss()],

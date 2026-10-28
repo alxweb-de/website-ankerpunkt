@@ -13,12 +13,10 @@ import { createClient } from '@sanity/client';
 // Auf den Build (astro build) und die Live-Website hat das keinen Einfluss: Dort entstehen neue
 // Detailseiten ausschließlich durch einen neuen Build.
 
-const DETAIL_TYPES = ['event', 'recurringEvent', 'group', 'newsPost'];
+const DETAIL_TYPES = ['event', 'recurringEvent'];
 const DETAIL_ROUTES = [
   'src/pages/veranstaltungen/[slug].astro',
   'src/pages/regelmaessige-veranstaltungen/[slug].astro',
-  'src/pages/gruppen/[slug].astro',
-  'src/pages/neuigkeiten/[slug].astro',
 ];
 
 /** @param {{ projectId?: string, dataset?: string, apiVersion?: string }} options */

@@ -113,6 +113,7 @@ const linkClass =
         }
         {settings?.address && (
           <address class:list={['mt-7 not-italic', bodyClass]}>
+            {text(settings.address.organizationName) && <>{text(settings.address.organizationName)}<br /></>}
             {settings.address.street}<br />
             {settings.address.zip} {settings.address.city}
           </address>

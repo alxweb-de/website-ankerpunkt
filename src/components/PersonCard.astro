@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { person, class: className = '', 'data-fade-up': fadeUp } = Astro.props;
-const photoUrl = person.photo?.asset ? urlFor(person.photo).width(160).height(160).fit('crop').url() : null;
+const photoUrl = person.photo?.asset ? urlFor(person.photo).width(160).height(160).fit('crop').auto('format').url() : null;
 const initials = person.name
   .split(' ')
   .map((part) => part[0])

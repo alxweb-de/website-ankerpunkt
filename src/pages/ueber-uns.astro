@@ -319,7 +319,7 @@ const IMAGE_SIZES = '(min-width: 1152px) 512px, (min-width: 1024px) 44vw, 100vw'
           <SectionHeading heading={peopleHeading} align="center" class="mx-auto" data-fade-up />
           <div class:list={['flex flex-wrap justify-center gap-6', peopleHeading && 'mt-12']}>
             {people.map((person, index) => {
-              const photoUrl = person.photo?.asset ? urlFor(person.photo).width(320).height(320).fit('crop').url() : null;
+              const photoUrl = person.photo?.asset ? urlFor(person.photo).width(320).height(320).fit('crop').auto('format').url() : null;
               const areas = person.responsibleAreas ?? [];
               const hasPersonContact = Boolean(person.email || person.phone);
               const initials = person.name

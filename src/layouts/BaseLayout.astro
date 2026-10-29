@@ -5,6 +5,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FadeUp from '../components/FadeUp.astro';
 import { getSettings } from '../lib/sanity/api';
+import { urlFor } from '../lib/sanity/image';
 
 interface Props {
   title: string;
@@ -14,9 +15,11 @@ interface Props {
   ogImage?: string;
   transparentHeader?: boolean;
   footerBorder?: boolean;
+  /** Seite nicht in Suchmaschinen aufnehmen (z. B. abgelaufene Veranstaltungen); Links bleiben verfolgbar. */
+  noindex?: boolean;
 }
 
-const { title, fullTitle, description, ogImage, transparentHeader = false, footerBorder = true } = Astro.props;
+const { title, fullTitle, description, ogImage, transparentHeader = false, footerBorder = true, noindex = false } = Astro.props;
 const settings = await getSettings();
 
 const siteName = settings?.churchName ?? 'Ankerpunkt';
@@ -28,6 +31,13 @@ const pageDescription =
 // Canonical-URL nur mit konfigurierter Live-Domain (SITE_URL, siehe astro.config.mjs) – sonst
 // würde der statische Build auf die Adresse des Build-Rechners (z. B. localhost) verweisen.
 const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+
+// Vorschaubild für Social Media: ohne eigenes Bild der Seite das Logo aus den Footer-Einstellungen
+// (Querformat, passt zum Vorschauformat), ersatzweise das Hauptlogo. Als JPG auf Papierfarbe, da
+// soziale Netzwerke transparente Flächen oft schwarz darstellen.
+const fallbackOgSource = settings?.footerLogo?.asset ? settings.footerLogo : settings?.logo?.asset ? settings.logo : undefined;
+const ogImageUrl =
+  ogImage ?? (fallbackOgSource ? urlFor(fallbackOgSource).width(1200).fit('max').bg('faf9f6').format('jpg').url() : undefined);
 ---
 
 <!doctype html>
@@ -36,7 +46,8 @@ const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href :
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {canonicalUrl && !noindex && <link rel="canonical" href={canonicalUrl} />}
+    {noindex && <meta name="robots" content="noindex, follow" />}
 
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
@@ -46,11 +57,13 @@ const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href :
     <meta property="og:description" content={pageDescription} />
     <meta property="og:locale" content="de_DE" />
     {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
-    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta property="og:site_name" content={siteName} />
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
 
     {/* Schriften liegen lokal (styles/fonts.css, public/fonts) – keine Verbindung zu Google Fonts.
         Die lateinischen Dateien werden vorab geladen, da sie auf jeder Seite gebraucht werden. */}

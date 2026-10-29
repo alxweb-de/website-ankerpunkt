@@ -153,6 +153,7 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     footerText,
     footerCreditEnabled,
     footerCreditLabel,
+    footerCreditName,
     footerCreditUrl,
     imprintText[]{
       ...,

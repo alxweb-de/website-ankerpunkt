@@ -465,9 +465,10 @@ export interface Settings {
   footerNavigation?: FooterLink[];
   footerVisit?: FooterVisit;
   footerText?: string;
-  /** Website-Credit „<Bezeichnung>: ALXWEB“ – ohne Angabe eingeschaltet. */
+  /** Website-Credit „<Bezeichnung>: <Name>“ – ohne Angabe eingeschaltet. */
   footerCreditEnabled?: boolean;
   footerCreditLabel?: string;
+  footerCreditName?: string;
   footerCreditUrl?: string;
   imprintText?: PortableTextValue;
   privacyText?: PortableTextValue;

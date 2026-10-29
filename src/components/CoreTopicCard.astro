@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { topic, class: className = '' } = Astro.props;
-const imageUrl = topic.image?.asset ? urlFor(topic.image).width(640).height(420).fit('crop').url() : null;
+const imageUrl = topic.image?.asset ? urlFor(topic.image).width(640).height(420).fit('crop').auto('format').url() : null;
 const hasIcon = !imageUrl && topic.icon && topic.icon !== 'none';
 ---
 

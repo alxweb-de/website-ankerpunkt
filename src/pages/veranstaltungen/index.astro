@@ -12,7 +12,7 @@ const recurringEvents = await getRecurringEvents();
 
 <BaseLayout title="Veranstaltungen" description="Alle kommenden Veranstaltungen und regelmäßigen Treffen bei Ankerpunkt.">
   <Container class="py-16 sm:py-20">
-    <SectionHeading eyebrow="Termine" heading="Veranstaltungen" text="Diese Termine erwarten dich als Nächstes bei Ankerpunkt." />
+    <SectionHeading level="h1" eyebrow="Termine" heading="Veranstaltungen" text="Diese Termine erwarten dich als Nächstes bei Ankerpunkt." />
 
     {/* Abgelaufene Termine blendet scripts/eventExpiry.ts auch ohne neuen Build aus. */}
     <div data-event-list>

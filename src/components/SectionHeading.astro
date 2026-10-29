@@ -7,9 +7,11 @@ interface Props {
   class?: string;
   /** Fade-up beim Scrollen (siehe FadeUp.astro). */
   'data-fade-up'?: boolean;
+  /** Überschriftenebene; h1, wenn die Überschrift zugleich die Seitenüberschrift ist. */
+  level?: 'h1' | 'h2';
 }
 
-const { eyebrow, heading, text, align = 'left', class: className = '', 'data-fade-up': fadeUp } = Astro.props;
+const { eyebrow, heading, text, align = 'left', class: className = '', 'data-fade-up': fadeUp, level: Heading = 'h2' } = Astro.props;
 const centered = align === 'center';
 ---
 
@@ -22,6 +24,6 @@ const centered = align === 'center';
       </p>
     )
   }
-  {heading && <h2 class:list={[eyebrow && 'mt-3', 'text-balance font-display text-3xl font-medium text-ink sm:text-4xl']}>{heading}</h2>}
+  {heading && <Heading class:list={[eyebrow && 'mt-3', 'text-balance font-display text-3xl font-medium break-words hyphens-auto text-ink sm:text-4xl']}>{heading}</Heading>}
   {text && <p class:list={[heading && 'mt-4', 'text-pretty text-lg leading-relaxed text-ink-soft']}>{text}</p>}
 </div>

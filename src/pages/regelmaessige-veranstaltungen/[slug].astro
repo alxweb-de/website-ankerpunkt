@@ -21,7 +21,7 @@ if (!event) {
   return Astro.redirect('/veranstaltungen');
 }
 
-const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(1600).fit('max').url() : null;
+const imageUrl = event.mainImage?.asset ? urlFor(event.mainImage).width(1600).fit('max').auto('format').url() : null;
 ---
 
 <BaseLayout title={event.title} description={event.excerpt} ogImage={imageUrl ?? undefined}>

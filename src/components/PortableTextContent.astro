@@ -19,7 +19,8 @@ interface Props {
 const { value, class: className = '', 'data-fade-up': fadeUp, variant = 'default' } = Astro.props;
 
 const LEGAL_TYPOGRAPHY = [
-  'prose-headings:font-display prose-headings:font-medium prose-headings:text-ink',
+  // Silbentrennung: lange Wörter wie „Datenschutzaufsichtsbehörde“ sprengen sonst schmale Bildschirme.
+  'prose-headings:font-display prose-headings:font-medium prose-headings:text-ink prose-headings:hyphens-auto prose-headings:break-words',
   'prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-2xl sm:prose-h2:text-[1.75rem] prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-xl',
   'prose-p:text-ink-soft prose-p:leading-[1.75] prose-li:text-ink-soft prose-li:leading-[1.7] prose-strong:text-ink',
   'prose-a:font-medium prose-a:text-anchor-700 prose-a:underline-offset-[3px] prose-a:decoration-anchor-300 hover:prose-a:text-anchor-900 hover:prose-a:decoration-anchor-700',

@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Container from '../components/Container.astro';
+import CtaButton from '../components/CtaButton.astro';
+
+// Fehlerseite für nicht vorhandene Adressen. Der Webserver liefert sie über die ErrorDocument-Regel
+// in public/.htaccess aus; Aufbau wie Impressum und Bildnachweise (zentrierte H1).
+---
+
+<BaseLayout title="Seite nicht gefunden" description="Die aufgerufene Seite wurde nicht gefunden." noindex>
+  <Container class="py-16 text-center sm:py-24">
+    <h1 class="text-balance font-display text-3xl leading-tight font-medium break-words hyphens-auto text-ink sm:text-5xl">
+      Seite nicht gefunden
+    </h1>
+    <p class="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-ink-soft">
+      Die aufgerufene Seite gibt es leider nicht (mehr). Vielleicht hilft dir die Startseite oder unsere Übersicht der Veranstaltungen weiter.
+    </p>
+    <div class="mt-10 flex flex-wrap justify-center gap-4">
+      <CtaButton href="/">Zur Startseite</CtaButton>
+      <CtaButton href="/veranstaltungen" variant="secondary">Veranstaltungen</CtaButton>
+    </div>
+  </Container>
+</BaseLayout>

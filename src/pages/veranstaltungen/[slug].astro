@@ -22,7 +22,7 @@ const settings = await getSettings();
 const siteName = settings?.churchName ?? 'Ankerpunkt';
 const labels = formatEventDate(event);
 
-const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).fit('max').url() : null;
+const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).fit('max').auto('format').url() : null;
 const isBookable = event.status !== 'cancelled' && event.status !== 'soldOut' && event.registrationLink;
 const isPast = event.visibleUntil <= Date.now();
 
@@ -83,7 +83,7 @@ const jsonLd = {
 const jsonLdHtml = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 ---
 
-<BaseLayout title={event.title} fullTitle={seoTitle} description={seoDescription} ogImage={imageUrl ?? undefined}>
+<BaseLayout title={event.title} fullTitle={seoTitle} description={seoDescription} ogImage={imageUrl ?? undefined} noindex={isPast}>
   <script is:inline type="application/ld+json" slot="head" set:html={jsonLdHtml} />
 
   <article class="py-16 sm:py-20">

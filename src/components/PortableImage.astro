@@ -3,7 +3,7 @@ import AiImageNote from './AiImageNote.astro';
 import { urlFor } from '../lib/sanity/image';
 
 const { node } = Astro.props;
-const imageUrl = node?.asset ? urlFor(node).width(1200).height(720).fit('crop').url() : null;
+const imageUrl = node?.asset ? urlFor(node).width(1200).height(720).fit('crop').auto('format').url() : null;
 ---
 
 {

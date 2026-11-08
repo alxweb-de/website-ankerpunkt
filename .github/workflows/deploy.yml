@@ -128,6 +128,7 @@ jobs:
 
       - name: SFTP-Upload zu STRATO
         if: steps.mode.outputs.mode != 'nur-build'
+        timeout-minutes: 15
         env:
           MODE: ${{ steps.mode.outputs.mode }}
           SFTP_HOST: ${{ secrets.STRATO_SFTP_HOST }}
@@ -142,42 +143,81 @@ jobs:
             fi
           done
 
+          # Leerzeichen und Zeilenumbrüche im Hostnamen sowie Windows-Zeilenenden im Schlüssel entfernen
+          # (typische Reste beim Einfügen in GitHub Secrets).
+          SFTP_HOST=$(printf '%s' "$SFTP_HOST" | tr -d '[:space:]')
+
           # Serverschlüssel festlegen: Verbindung nur zum echten STRATO-Server (kein blindes Vertrauen).
           known_hosts="$RUNNER_TEMP/known_hosts"
-          printf '%s\n' "$SFTP_KNOWN_HOSTS" > "$known_hosts"
+          printf '%s\n' "$SFTP_KNOWN_HOSTS" | tr -d '\r' > "$known_hosts"
           chmod 600 "$known_hosts"
           trap 'rm -f "$known_hosts"' EXIT
 
+          # Vorabprüfung ohne Anmeldung, damit ein falsch gesetztes Secret sofort und eindeutig auffällt.
+          # Ausgegeben werden nur öffentliche Fingerabdrücke; den Hostnamen schwärzt GitHub (Secret).
+          # 1. Enthält das Secret einen ED25519-Schlüssel für genau diesen Host?
+          pinned=$(ssh-keygen -F "$SFTP_HOST" -f "$known_hosts" 2>/dev/null | awk '$2 == "ssh-ed25519" { print $3; exit }' || true)
+          if [ -z "$pinned" ]; then
+            echo "::error::STRATO_SFTP_KNOWN_HOSTS enthält keinen ED25519-Eintrag für den Host aus STRATO_SFTP_HOST (siehe docs/deployment.md)."
+            echo "Gültige Einträge im Secret:"
+            ssh-keygen -lf "$known_hosts" 2>/dev/null || echo "  keine"
+            exit 1
+          fi
+          # 2. Stimmt er mit dem Schlüssel überein, den der Server jetzt vorzeigt? Der gescannte Schlüssel
+          #    wird nur verglichen, nie übernommen; die eigentliche Prüfung macht ssh beim Verbinden.
+          offered=$(timeout 30 ssh-keyscan -T 15 -t ed25519 "$SFTP_HOST" 2>/dev/null | awk '$2 == "ssh-ed25519" { print $3; exit }' || true)
+          fingerprint() { printf 'x ssh-ed25519 %s\n' "$1" | ssh-keygen -lf - | awk '{ print $2 }'; }
+          if [ -z "$offered" ]; then
+            echo "::error::Der SFTP-Server ist nicht erreichbar oder bietet keinen ED25519-Schlüssel an."
+            exit 1
+          fi
+          if [ "$offered" != "$pinned" ]; then
+            echo "::error::Hostschlüssel stimmt nicht überein – Verbindung abgelehnt."
+            echo "  hinterlegt: $(fingerprint "$pinned")"
+            echo "  Server:     $(fingerprint "$offered")"
+            exit 1
+          fi
+          echo "Hostschlüssel bestätigt: $(fingerprint "$pinned") (ED25519)."
+
           # Das Passwort liest lftp aus LFTP_PASSWORD; es steht weder in der Befehlszeile noch im Log.
-          # Alle Pfade sind relativ zum Startverzeichnis des SFTP-Zugangs.
+          # Alle Pfade sind relativ zum Startverzeichnis des SFTP-Zugangs. ssh akzeptiert nur den
+          # hinterlegten ED25519-Schlüssel; lftp versucht es bei Verbindungsfehlern nicht endlos erneut.
           lftp_run() {
-            lftp -c "
+            local limit=$1
+            timeout "$limit" lftp -c "
               set cmd:fail-exit yes
-              set net:max-retries 3
+              set net:max-retries 2
+              set net:persist-retries 0
               set net:timeout 30
               set net:reconnect-interval-base 5
               set sftp:auto-confirm no
-              set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$known_hosts -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive'
+              set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$known_hosts -o HostKeyAlgorithms=ssh-ed25519 -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive'
               open --env-password -u '$SFTP_USER' 'sftp://$SFTP_HOST'
-              $1
+              $2
             "
           }
 
           # Schutz vor einem falschen Zugang: Nur hochladen, wenn das Startverzeichnis als
           # EF-Horhausen-Ziel markiert ist (Datei einmalig von Hand anlegen, siehe docs/deployment.md).
-          if ! lftp_run "cat .ef-horhausen-deploy" > /dev/null; then
-            echo "::error::Markierungsdatei .ef-horhausen-deploy fehlt im Startverzeichnis – kein Upload."
+          if lftp_run 120 "cat .ef-horhausen-deploy" > /dev/null; then
+            echo "Verbindung und Zielverzeichnis geprüft."
+          else
+            status=$?
+            if [ "$status" = "124" ]; then
+              echo "::error::Zeitüberschreitung bei der SFTP-Verbindung – kein Upload."
+            else
+              echo "::error::Anmeldung fehlgeschlagen oder Markierungsdatei .ef-horhausen-deploy fehlt im Startverzeichnis – kein Upload."
+            fi
             exit 1
           fi
-          echo "Verbindung und Zielverzeichnis geprüft."
 
           # Kein --delete: Auf dem Server wird nichts gelöscht. Erst Dateien (CSS/JS/Bilder/Schriften),
           # dann HTML und .htaccess – so verweisen neue Seiten nie auf noch fehlende Dateien.
           if [ "$MODE" = "testlauf" ]; then
             echo "Testlauf – folgende Übertragungen würden stattfinden (es wird nichts geändert):"
-            lftp_run "mirror --reverse --dry-run dist/ ./"
+            lftp_run 300 "mirror --reverse --dry-run dist/ ./"
           else
-            lftp_run "
+            lftp_run 600 "
               mirror --reverse --parallel=4 --verbose=1 --exclude-glob '*.html' --exclude-glob .htaccess dist/ ./
               mirror --reverse --parallel=4 --verbose=1 dist/ ./
             "

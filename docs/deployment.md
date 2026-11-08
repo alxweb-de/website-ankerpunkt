@@ -33,7 +33,9 @@ Manuell (Run workflow) ───┘   (nie 2 gleichzeitig)                      
 - Ziel ist ausschließlich das Startverzeichnis des SFTP-Zugangs, im Workflow steht kein Serverpfad.
 - Ohne die Markierungsdatei `.ef-horhausen-deploy` im Startverzeichnis lädt der Workflow nichts hoch. Das schützt
   davor, versehentlich mit einem falschen Zugang (z. B. dem Hauptzugang) in ein anderes Verzeichnis zu schreiben.
-- Die Verbindung kommt nur zustande, wenn der Server den hinterlegten Schlüssel hat.
+- Die Verbindung kommt nur zustande, wenn der Server den hinterlegten ED25519-Schlüssel hat. Ein falsch gesetztes
+  Secret fällt schon vor der Anmeldung auf (siehe „Wie der Workflow den Schlüssel prüft“).
+- Zeitgrenzen für ssh und lftp verhindern, dass ein hängender Upload den Lauf blockiert.
 - Zugangsdaten stehen nur in GitHub Secrets. Das Passwort steht weder in Befehlszeilen noch im Log.
   Das Repository ist öffentlich, also auch die Logs.
 
@@ -62,18 +64,54 @@ Lege sie unter **Settings → Environments → production → Environment secret
 | `STRATO_SFTP_HOST` | SFTP-Server laut STRATO-Kundenbereich (in der Regel `ssh.strato.de`) |
 | `STRATO_SFTP_USER` | Benutzername des **separaten** EF-Horhausen-SFTP-Zugangs |
 | `STRATO_SFTP_PASSWORD` | Passwort dieses Zugangs |
-| `STRATO_SFTP_KNOWN_HOSTS` | Serverschlüssel (siehe unten) |
+| `STRATO_SFTP_KNOWN_HOSTS` | ED25519-Serverschlüssel als eine Zeile (siehe unten) |
 
-**Serverschlüssel ermitteln:** Am eigenen Rechner ausführen:
+`STRATO_SFTP_HOST` muss **genau** der Servername sein, ohne `sftp://`, ohne Port und ohne Leerzeichen. Der
+Schlüssel in `STRATO_SFTP_KNOWN_HOSTS` muss für genau diesen Namen ermittelt werden.
 
-```sh
-ssh-keyscan -t ed25519,rsa ssh.strato.de > strato_known_hosts
-ssh-keygen -lf strato_known_hosts
+**Serverschlüssel ermitteln (Windows 10/11):** Verwende das OpenSSH aus Git für Windows. Das bei Windows
+mitgelieferte `ssh-keyscan` (9.5) bricht bei STRATO mit `choose_kex: unsupported KEX method` ab. In PowerShell:
+
+```powershell
+& "C:\Program Files\Git\usr\bin\ssh-keyscan.exe" -t ed25519 ssh.strato.de 2>$null
+& "C:\Program Files\Git\usr\bin\ssh-keyscan.exe" -t ed25519 ssh.strato.de 2>$null | & "C:\Program Files\Git\usr\bin\ssh-keygen.exe" -lf -
 ```
 
-Vergleiche die angezeigten Fingerabdrücke (`SHA256:…`) mit denen, die dein SFTP-Programm (z. B. FileZilla) bei
-der ersten Verbindung anzeigt. Stimmen sie überein, kopierst du den **gesamten Inhalt** von
-`strato_known_hosts` (alle Zeilen ohne `#`) in das Secret. Danach kannst du die Datei löschen.
+Der erste Befehl gibt die Schlüsselzeile aus, der zweite ihren Fingerabdruck. Stand November 2026 lautet er:
+
+```
+256 SHA256:yrt1ZYQO/YULXZ/IXS18adptcEBuDbszghxyfJut/RY ssh.strato.de (ED25519)
+```
+
+**Unabhängig gegenprüfen**, bevor du den Schlüssel übernimmst:
+
+- Der Fingerabdruck, den FileZilla oder WinSCP bei der ersten Verbindung mit `ssh.strato.de` anzeigen, muss
+  übereinstimmen.
+- Führe den zweiten Befehl zusätzlich in einem anderen Netz aus (z. B. über einen Handy-Hotspot).
+
+**Inhalt des Secrets:** genau **eine Zeile** aus dem ersten Befehl, direkt aus dem PowerShell-Fenster kopiert,
+nicht über eine mit `>` gespeicherte Datei (PowerShell 5.1 speichert sie als UTF-16):
+
+```
+ssh.strato.de ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…
+```
+
+- Keine Zeilen, die mit `#` beginnen, keinen RSA- oder ECDSA-Schlüssel und nicht nur den Fingerabdruck `SHA256:…`
+  einfügen. Der Workflow akzeptiert ausschließlich ED25519.
+- Windows-Zeilenenden und ein Zeilenumbruch am Ende schaden nicht, der Workflow entfernt sie.
+
+**Wie der Workflow den Schlüssel prüft:** Vor jeder Verbindung prüft er ohne Anmeldung, ob das Secret einen
+ED25519-Eintrag für genau den Host aus `STRATO_SFTP_HOST` enthält. Danach vergleicht er diesen Eintrag mit dem
+Schlüssel, den der Server vorzeigt. Beim Verbinden prüft ssh noch einmal selbst (`StrictHostKeyChecking=yes`,
+nur `ssh-ed25519`). Schlägt eine Prüfung fehl, bricht der Lauf sofort ab, bevor ein Passwort gesendet wird:
+
+| Meldung im Log | Ursache und Abhilfe |
+|---|---|
+| „enthält keinen ED25519-Eintrag für den Host“ | Hostname und Schlüsselzeile passen nicht zusammen, oder das Secret enthält keine gültige ED25519-Zeile. Beide Secrets wie oben neu setzen. |
+| „Hostschlüssel stimmt nicht überein“ | Der Server zeigt einen anderen Schlüssel als hinterlegt. **Nicht einfach übernehmen:** Erst mit FileZilla und über ein anderes Netz prüfen oder bei STRATO nachfragen, ob der Schlüssel geändert wurde. |
+| „Server nicht erreichbar oder bietet keinen ED25519-Schlüssel an“ | Netzwerkproblem oder falscher Servername. |
+| „Zeitüberschreitung bei der SFTP-Verbindung“ | Verbindung hängt. Später erneut versuchen. |
+| „Anmeldung fehlgeschlagen oder Markierungsdatei … fehlt“ | Benutzername oder Passwort falsch, oder `.ef-horhausen-deploy` fehlt im Startverzeichnis. |
 
 ### 3. Variablen
 

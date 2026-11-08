@@ -133,6 +133,7 @@ export const SETTINGS_QUERY = defineQuery(/* groq */ `
     "logo": logo${logoImageFragment},
     "logoLight": logoLight${logoImageFragment},
     "logoDark": logoDark${logoImageFragment},
+    "favicon": favicon{ asset->{ _id, url }, hotspot, crop },
     address,
     phone,
     email,

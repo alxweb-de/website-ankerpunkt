@@ -9,7 +9,7 @@ import { urlFor } from '../lib/sanity/image';
 
 interface Props {
   title: string;
-  /** Vollständiger Seitentitel; ersetzt das Schema „Titel · Gemeindename“. */
+  /** Vollständiger Seitentitel; ersetzt das Schema „Titel – Gemeindename“. */
   fullTitle?: string;
   description?: string;
   ogImage?: string;
@@ -22,8 +22,8 @@ interface Props {
 const { title, fullTitle, description, ogImage, transparentHeader = false, footerBorder = true, noindex = false } = Astro.props;
 const settings = await getSettings();
 
-const siteName = settings?.churchName ?? 'Ankerpunkt';
-const pageTitle = fullTitle || (title ? `${title} · ${siteName}` : siteName);
+const siteName = settings?.churchName ?? 'EF-Horhausen';
+const pageTitle = fullTitle || (title ? `${title} – ${siteName}` : siteName);
 const pageDescription =
   description ??
   'EF-Horhausen (Evangelische Freikirche Horhausen) ist eine lebendige Kirchengemeinde in Horhausen mit offenen Türen für Familien, Jugendliche und Erwachsene.';
@@ -38,6 +38,20 @@ const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href :
 const fallbackOgSource = settings?.footerLogo?.asset ? settings.footerLogo : settings?.logo?.asset ? settings.logo : undefined;
 const ogImageUrl =
   ogImage ?? (fallbackOgSource ? urlFor(fallbackOgSource).width(1200).fit('max').bg('faf9f6').format('jpg').url() : undefined);
+
+// Favicon aus den globalen Einstellungen: quadratisch zugeschnitten (Zuschnitt/Hotspot aus dem CMS) und
+// stets als PNG, damit der MIME-Type im Link-Tag passt. Die Integration sanity-local-media legt die Dateien
+// beim Build unter /media/sanity/ ab – ausgeliefert wird lokal, nicht vom Sanity-CDN. Das Apple-Touch-Icon
+// bekommt die Papierfarbe als Hintergrund, da iOS transparente Flächen schwarz füllt.
+// Ohne CMS-Favicon bleibt das bisherige /favicon.svg.
+const faviconSource = settings?.favicon?.asset ? settings.favicon : undefined;
+const faviconUrl = (size: number, background?: string) => {
+  const url = urlFor(faviconSource!).width(size).height(size).fit('crop').format('png');
+  return (background ? url.bg(background) : url).url();
+};
+const favicons = faviconSource
+  ? { icon32: faviconUrl(32), icon192: faviconUrl(192), appleTouch: faviconUrl(180, 'faf9f6') }
+  : undefined;
 ---
 
 <!doctype html>
@@ -45,7 +59,17 @@ const ogImageUrl =
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {
+      favicons ? (
+        <>
+          <link rel="icon" type="image/png" sizes="32x32" href={favicons.icon32} />
+          <link rel="icon" type="image/png" sizes="192x192" href={favicons.icon192} />
+          <link rel="apple-touch-icon" sizes="180x180" href={favicons.appleTouch} />
+        </>
+      ) : (
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      )
+    }
     {canonicalUrl && !noindex && <link rel="canonical" href={canonicalUrl} />}
     {noindex && <meta name="robots" content="noindex, follow" />}
 

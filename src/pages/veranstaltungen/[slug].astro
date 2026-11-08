@@ -19,7 +19,7 @@ export async function getStaticPaths() {
 
 const { event }: { event: EventItem } = Astro.props;
 const settings = await getSettings();
-const siteName = settings?.churchName ?? 'Ankerpunkt';
+const siteName = settings?.churchName ?? 'EF-Horhausen';
 const labels = formatEventDate(event);
 
 const imageUrl = event.coverImage?.asset ? urlFor(event.coverImage).width(1600).fit('max').auto('format').url() : null;
@@ -32,7 +32,7 @@ const isPast = event.visibleUntil <= Date.now();
 // entstehen keine abgeschnittenen HTML-Tags.
 const descriptionText = portableTextToPlainText(event.description);
 const summaryText = event.excerpt || descriptionText;
-const seoTitle = `${event.title} am ${labels.shortDate} | ${siteName}`;
+const seoTitle = `${event.title} am ${labels.shortDate} – ${siteName}`;
 const seoDescription = truncate(
   [
     // Gleiche Zeitangabe wie auf der Seite: „10:30 Uhr“ bzw. „10:30–11:30 Uhr“.

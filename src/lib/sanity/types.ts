@@ -447,6 +447,7 @@ export interface Settings {
   logo?: SanityImageData;
   logoLight?: SanityImageData;
   logoDark?: SanityImageData;
+  favicon?: SanityImageData;
   address?: Address;
   phone?: string;
   email?: string;

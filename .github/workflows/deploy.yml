@@ -1,0 +1,194 @@
+# Produktions-Build und Veröffentlichung von https://ef-horhausen.de bei STRATO (SFTP).
+# Anleitung und Einrichtung: docs/deployment.md
+#
+# Auslöser:
+#   - Push auf master (Codeänderungen)
+#   - repository_dispatch "sanity-publish" (Webhook aus Sanity nach dem Veröffentlichen)
+#   - manueller Start: Actions → "Deploy" → "Run workflow" mit Modus nur-build / testlauf / veroeffentlichen
+#
+# Sicherheit:
+#   - Automatisch (Push, Sanity) wird nur hochgeladen, wenn die Variable AUTO_DEPLOY_ENABLED "true" ist.
+#     Sanity-Auslöser werden zusätzlich nur bei SANITY_WEBHOOK_ENABLED = "true" überhaupt ausgeführt.
+#   - STRATO-Zugangsdaten kommen ausschließlich aus den Secrets der Umgebung "production".
+#   - Upload nur in das Startverzeichnis des SFTP-Zugangs, ohne Löschen auf dem Server, und nur, wenn
+#     dort die Markierungsdatei .ef-horhausen-deploy liegt (Schutz vor einem falschen Zugang).
+
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  repository_dispatch:
+    types: [sanity-publish]
+  workflow_dispatch:
+    inputs:
+      modus:
+        description: 'nur-build: nur bauen · testlauf: SFTP-Verbindung prüfen und anzeigen, was hochgeladen würde (ändert nichts) · veroeffentlichen: hochladen'
+        type: choice
+        options: [nur-build, testlauf, veroeffentlichen]
+        default: nur-build
+
+# Nie zwei Veröffentlichungen gleichzeitig. Ein laufender Upload wird nicht abgebrochen; kommen
+# währenddessen weitere Auslöser, wartet nur der neueste (er enthält ohnehin den aktuellen Stand).
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-deploy:
+    # Sanity-Auslöser erst nach ausdrücklicher Freischaltung ausführen.
+    if: github.event_name != 'repository_dispatch' || vars.SANITY_WEBHOOK_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      # Öffentliche Werte (identisch mit .env.example), kein Geheimnis.
+      PUBLIC_SANITY_PROJECT_ID: 05wkaq5y
+      PUBLIC_SANITY_DATASET: production
+      PUBLIC_SANITY_API_VERSION: 2026-06-30
+
+    steps:
+      - name: Modus festlegen
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.modus }}
+          AUTO_DEPLOY_ENABLED: ${{ vars.AUTO_DEPLOY_ENABLED }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            mode="$INPUT_MODE"
+          elif [ "$AUTO_DEPLOY_ENABLED" = "true" ]; then
+            mode="veroeffentlichen"
+          else
+            mode="nur-build"
+          fi
+          case "$mode" in
+            nur-build|testlauf|veroeffentlichen) ;;
+            *) echo "::error::Unbekannter Modus."; exit 1 ;;
+          esac
+          echo "Auslöser: $EVENT · Modus: $mode"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      # Mehrere Veröffentlichungen in Sanity kurz hintereinander zu einem Build bündeln: Während dieser
+      # Pause hält der Lauf die Warteschlange, alle weiteren Auslöser fallen zu einem einzigen zusammen.
+      - name: Sammelpause für Sanity-Änderungen
+        if: github.event_name == 'repository_dispatch'
+        run: sleep 60
+
+      - name: Code auschecken
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          # package.json und Astro 7 verlangen Node >= 22.12.
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci --no-audit --no-fund
+
+      # npm ci leert node_modules – daher den Cache der lokal ausgelieferten Sanity-Medien
+      # (integrations/sanity-local-media.mjs) erst danach wiederherstellen.
+      - name: Sanity-Medien-Cache wiederherstellen
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/sanity-media
+          key: sanity-media-${{ github.run_id }}
+          restore-keys: sanity-media-
+
+      - name: Webseite bauen
+        run: npm run build
+
+      - name: Build prüfen
+        run: |
+          for file in dist/index.html dist/.htaccess dist/404.html dist/sitemap.xml dist/robots.txt; do
+            if [ ! -s "$file" ]; then
+              echo "::error::$file fehlt oder ist leer – Veröffentlichung abgebrochen."
+              exit 1
+            fi
+          done
+          echo "Build vollständig: $(find dist -type f | wc -l) Dateien, $(du -sh dist | cut -f1)."
+
+      - name: Ohne Upload beendet
+        if: steps.mode.outputs.mode == 'nur-build'
+        run: echo "::notice::Modus nur-build – Build erfolgreich geprüft, nichts hochgeladen."
+
+      - name: lftp installieren
+        if: steps.mode.outputs.mode != 'nur-build'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: SFTP-Upload zu STRATO
+        if: steps.mode.outputs.mode != 'nur-build'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          SFTP_HOST: ${{ secrets.STRATO_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.STRATO_SFTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.STRATO_SFTP_PASSWORD }}
+          SFTP_KNOWN_HOSTS: ${{ secrets.STRATO_SFTP_KNOWN_HOSTS }}
+        run: |
+          for name in SFTP_HOST SFTP_USER LFTP_PASSWORD SFTP_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Ein Secret fehlt in der Umgebung 'production' ($name) – siehe docs/deployment.md."
+              exit 1
+            fi
+          done
+
+          # Serverschlüssel festlegen: Verbindung nur zum echten STRATO-Server (kein blindes Vertrauen).
+          known_hosts="$RUNNER_TEMP/known_hosts"
+          printf '%s\n' "$SFTP_KNOWN_HOSTS" > "$known_hosts"
+          chmod 600 "$known_hosts"
+          trap 'rm -f "$known_hosts"' EXIT
+
+          # Das Passwort liest lftp aus LFTP_PASSWORD; es steht weder in der Befehlszeile noch im Log.
+          # Alle Pfade sind relativ zum Startverzeichnis des SFTP-Zugangs.
+          lftp_run() {
+            lftp -c "
+              set cmd:fail-exit yes
+              set net:max-retries 3
+              set net:timeout 30
+              set net:reconnect-interval-base 5
+              set sftp:auto-confirm no
+              set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$known_hosts -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive'
+              open --env-password -u '$SFTP_USER' 'sftp://$SFTP_HOST'
+              $1
+            "
+          }
+
+          # Schutz vor einem falschen Zugang: Nur hochladen, wenn das Startverzeichnis als
+          # EF-Horhausen-Ziel markiert ist (Datei einmalig von Hand anlegen, siehe docs/deployment.md).
+          if ! lftp_run "cat .ef-horhausen-deploy" > /dev/null; then
+            echo "::error::Markierungsdatei .ef-horhausen-deploy fehlt im Startverzeichnis – kein Upload."
+            exit 1
+          fi
+          echo "Verbindung und Zielverzeichnis geprüft."
+
+          # Kein --delete: Auf dem Server wird nichts gelöscht. Erst Dateien (CSS/JS/Bilder/Schriften),
+          # dann HTML und .htaccess – so verweisen neue Seiten nie auf noch fehlende Dateien.
+          if [ "$MODE" = "testlauf" ]; then
+            echo "Testlauf – folgende Übertragungen würden stattfinden (es wird nichts geändert):"
+            lftp_run "mirror --reverse --dry-run dist/ ./"
+          else
+            lftp_run "
+              mirror --reverse --parallel=4 --verbose=1 --exclude-glob '*.html' --exclude-glob .htaccess dist/ ./
+              mirror --reverse --parallel=4 --verbose=1 dist/ ./
+            "
+          fi
+
+      - name: Live-Seite prüfen
+        if: steps.mode.outputs.mode == 'veroeffentlichen'
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 https://ef-horhausen.de/)
+          echo "https://ef-horhausen.de/ antwortet mit HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Startseite antwortet nicht mit HTTP 200."
+            exit 1
+          fi
